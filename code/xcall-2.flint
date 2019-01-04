@@ -1,0 +1,5 @@
+do {
+  call ext.simpleFunction()
+} catch is ExternalCallError {
+  // recover gracefully
+}

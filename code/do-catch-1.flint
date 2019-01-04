@@ -1,0 +1,11 @@
+do {
+  call f
+  call g
+  do {
+    call h
+  } catch is ExternalCallError {
+    // block A
+  }
+} catch is ExternalCallError {
+  // block B
+}

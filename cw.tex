@@ -1,0 +1,59 @@
+\documentclass[12pt,twoside]{report}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\inputencoding{utf8}
+
+\newcommand{\reporttitle}{Making Smart Contracts Safer}
+\newcommand{\reportauthors}{Aurel Bílý\\Catalin Craciun\\Calin Farcas\\Yicheng Luo\\Constantin Mueller\\Niklas Vangerow}
+\newcommand{\reportsupervisor}{Susan Eisenbach}
+\newcommand{\reporttype}{362 Software Engineering Group Project}
+
+\input{includes}
+
+% \usetikzlibrary{arrows,positioning,decorations.pathreplacing}
+
+\begin{document}
+
+\input{titlepage}
+
+% set pre-content page numbering
+\pagenumbering{roman}
+\clearpage{\pagestyle{empty}\cleardoublepage}
+\setcounter{page}{1}
+\pagestyle{fancy}
+
+% toc, set content page numbering
+\fancyhead[RE,LO]{\sffamily {Table of Contents}}
+\tableofcontents
+\clearpage{\pagestyle{empty}\cleardoublepage}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\fancyhead[LE,RO]{\slshape \rightmark}
+\fancyhead[LO,RE]{\slshape \leftmark}
+
+\chapter{Executive Summary}
+\input{chapters/executive-summary}
+
+\chapter{Motivations, Objectives, and Achievements}
+\input{chapters/motivations-objectives-achievements}
+
+\chapter{Project Management}
+\input{chapters/project-management}
+
+\chapter{Design and Implementation}
+\input{chapters/design-intro}
+\input{chapters/design-codebase}
+\input{chapters/design-approach}
+\input{chapters/design-language}
+\input{chapters/design-ide}
+
+\chapter{Evaluation}
+\input{chapters/evaluation}
+
+\chapter{Reflections and Future extensions}
+\input{chapters/reflections-future-extensions}
+
+\bibliographystyle{plain}
+\bibliography{cw}
+
+\end{document}

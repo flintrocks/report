@@ -1,0 +1,30 @@
+\section{Motivation}
+
+At the moment, the vast majority of smart contracts are written in Solidity, a high-level statically-typed programming language. However, Solidity has few safety features and contracts written in Solidity have therefore been subject to attacks and bugs. Hundreds of millions of dollars worth of cryptocurrency are estimated to be at risk because of unsafe smart contracts. In order for the full potential of the blockchain technology to be used and the loss of money to be avoided, smart contracts need to become safer.
+
+\section{Objectives}
+
+Flint, like Solidity, is a programming language for smart contracts in Ethereum. Being type-safe and having a range of built-in security checks and mechanisms, Flint aims to be much safer than Solidity. Flint was developed as part of Franklin Schrans' thesis "Writing Safe Smart Contracts in Flint"
+\cite{flint}
+; however, it lacked important and necessary features, such as external calls that allow a smart contract to interact with other contracts. In particular, without external calls there is no way to process Ether, so Flint would need to create its own coin. In addition, there was no ecosystem for Flint development with the exception of syntax highlighting in Vim and Atom. Our goal was to improve both aspects and in particular we wanted to:
+
+\begin{itemize}
+	\item Develop an Asset trait that models cryptocurrencies to ensure that the state of currency in the contract is consistent with that on the blockchain
+	\item Generate certifications that highlight compilation warnings and other possible problems in the code to improve the Flint ecosystem
+	\item Design and implement external calls in order to be able to interact with other contracts and process Ether
+\end{itemize}
+
+\section{Achievements}
+
+In the course of the project, we adapted those goals slightly as we came across new issues and re-prioritised changes to the compiler. We achieved the extension of the Flint language and the improvement of its ecosystem through the following changes:
+
+\begin{itemize}
+	\item Adding a special Asset trait
+	\item Adding a polymorphic Self type
+	\item Producing diagnostic output that is compatible the Language Server Protocol and can be used for example in Microsoft Visual Studio
+	\item Designing and implementing external calls
+	\item Designing and implementing exception handling for external calls
+	\item Setting up a unit testing framework for the Flint compiler
+	\item Refactoring the code generation
+	\item Correcting issues in the code base
+\end{itemize}

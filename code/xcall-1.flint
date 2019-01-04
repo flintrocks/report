@@ -1,0 +1,4 @@
+call! ext.functionWithArguments(value: 1 as! int256, tax: 2 as! int128)
+// note the hyper-parameters:
+call(value: Wei(100))! ext.expensiveFunction()
+call(gas: 5000)! ext.simpleFunction()

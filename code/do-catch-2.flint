@@ -1,0 +1,15 @@
+success_f = call f
+if (success_f) {
+  success_g = call g
+  if (success_g) {
+    success_h = call h
+    if (success_h) {
+    } else {
+      // block A
+    }
+  } else {
+    // block B
+  }
+} else {
+  // block B
+}

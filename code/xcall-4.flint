@@ -1,0 +1,11 @@
+if let x: Int = (call? ext.returnInt()) as! Int {
+  // function returned a value, here available as `x'
+} else {
+  // no value returned, handle gracefully
+}
+
+if let y: Bool = (call(gas: 5000)? ext.returnBool()) as! Bool {
+  // function returned a value, here available as `y'
+} else {
+  // no value returned, handle gracefully
+}

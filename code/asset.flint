@@ -1,0 +1,37 @@
+// Any currency should implement this trait to be able to use the currency
+// fully. The default implementations should be left intact, only
+// `getRawValue` and `setRawValue` need to be implemented.
+
+struct trait Asset {
+  // Initialises the asset "unsafely", i.e. from `amount` given as an integer.
+  init(unsafeRawValue: Int)
+
+  // Initialises the asset by transferring `amount` from an existing asset.
+  // Should check if `source` has sufficient funds, and cause a fatal error
+  // if not.
+  init(source: inout Self, amount: Int)
+
+  // Initialises the asset by transferring all funds from `source`.
+  // `source` should be left empty.
+  init(source: inout Self)
+
+  // Moves `amount` from `source` into `this` asset.
+  mutating func transfer(source: inout Self, amount: Int) {
+    if source.getRawValue() < amount {
+      fatalError()
+    }
+
+    source.setRawValue(value: source.getRawValue() - amount)
+    setRawValue(value: getRawValue() + amount)
+  }
+
+  mutating func transfer(source: inout Self) {
+    transfer(source: &source, amount: source.getRawValue())
+  }
+
+  // Returns the funds contained in this asset, as an integer.
+  mutating func setRawValue(value: Int) -> Int
+
+  // Returns the funds contained in this asset, as an integer.
+  func getRawValue() -> Int
+}

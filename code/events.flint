@@ -1,0 +1,4 @@
+contract A {
+  event Finished()
+  event Approve(address: Address, amount: Int = 0)
+}

@@ -1,0 +1,200 @@
+\section{Improving the Language}
+
+Improving the language involved implementing new features and fixing problems with the compiler.
+
+\begin{itemize}
+	\item Asset traits – traits that capture the behaviour of assets such as Wei and express this in an extensible manner.
+	\begin{itemize}
+		\item \href{https://github.com/flintrocks/flint/pull/28}{\#28} Add self token to parser
+		\item \href{https://github.com/flintrocks/flint/pull/31}{\#31} Add struct trait Asset into stdlib 
+		\item \href{https://github.com/flintrocks/flint/pull/33}{\#33} Polymorphic Self for defaulted function declarations in struct traits 
+		\item \href{https://github.com/flintrocks/flint/pull/38}{\#38} Concrete Self in non-defaulted function declarations
+		\item \href{https://github.com/flintrocks/flint/pull/47}{\#47} Adding Self to Asset Trait, fixing init and type checking issues
+		\item \href{https://github.com/flintrocks/flint/pull/56}{\#56} Remove stdlibType from types
+	\end{itemize}
+	\item External calls – calling Solidity contracts deployed on the blockchain to be a part of the network.
+	\begin{itemize}
+		\item \href{https://github.com/flintrocks/flint/pull/68}{\#68} Parse do ... catch statements
+		\item \href{https://github.com/flintrocks/flint/pull/69}{\#69} Parse if let ... statements
+		\item \href{https://github.com/flintrocks/flint/pull/70}{\#70} Parse external calls
+		\item \href{https://github.com/flintrocks/flint/pull/71}{\#71} External traits
+		\item \href{https://github.com/flintrocks/flint/pull/72}{\#72} Semantic checks for external calls
+		\item \href{https://github.com/flintrocks/flint/pull/73}{\#73} Generate IR for external calls
+		\item \href{https://github.com/flintrocks/flint/pull/74}{\#74} Re-entrancy protection during external calls
+	\end{itemize}
+	\item Adding unit testing – adding necessary testing frameworks and foundational tests to better understand the compiler behaviour.
+	\begin{itemize}
+		\item \href{https://github.com/flintrocks/flint/pull/75}{\#75} Set up testing
+		\item \href{https://github.com/flintrocks/flint/pull/86}{\#86} Unit test part of SemanticAnalyzer
+		\item work on updating Cuckoo and its dependencies
+	\end{itemize}
+	\item Refactoring code generation – improving the extensibility of the code generator.
+	\begin{itemize}
+		\item \href{https://github.com/flintrocks/flint/pull/127}{\#127}, Add definition for YUL types
+		\item \href{https://github.com/flintrocks/flint/pull/110}{\#110}, \href{https://github.com/flintrocks/flint/pull/127}{\#127} Refactor IR generation
+		\item \href{https://github.com/flintrocks/flint/pull/127}{\#127} Use the refactored codegen to handle try-catch blocks
+	\end{itemize}
+	\item Updating the documentation
+	\begin{itemize}
+		\item \href{https://github.com/flintrocks/flint/pull/139}{\#139} Updated language guide
+	\end{itemize}
+\end{itemize}
+
+We have also improved existing features such as the associativity of binary expressions after parsing and the declaration syntax of events.
+
+In total we made changes to 391 files, with 12,153 additions and 2,157 deletions.\footnote{\url{https://github.com/flintlang/flint/compare/master...flintrocks:master}}
+
+\subsection{Asset Trait}
+
+One of our first goals was to add an Asset trait to the Flint standard library. The purpose of this was to enable assets other than Wei to be declared, while still having common shared functionality without duplicating the same code. Less duplication means that it is less likely for a user to forget to re-implement the safety features of the transfer method, as well as only allowing transfers to be made between two assets of the same type.
+
+The problem with this was that the Asset trait would need to use a generic type for some of its method signatures, such as the transfer method. This is because using Asset would not ensure that transfers only happen between the same asset types, as Asset theoretically represents all possible asset types. Flint did not have generics.
+
+We identified two solutions to the problem. 
+
+The first one was to implement generics with type constraints in Flint. This requires support for generics with type constraints. The asset trait declaration involved includes bounded type parameters in the form \mintinline{swift}{struct trait Asset<T: Asset<T>>}, similar to how \mintinline{java}{Comparable} is declared in Java\footnote{\url{https://docs.oracle.com/javase/tutorial/java/generics/bounded.html}}. An asset such as Wei could be declared as \mintinline{swift}{struct Wei: Asset<Wei>}, and this way the concrete type Wei would be recorded in the declaration and used for the trait methods.
+
+The second solution was to implement a polymorphic Self type. Any occurrences of Self in a trait signature would be replaced with the concrete type of the asset structure in question, preventing the programmer from using two assets at the same time as these functions would be undefined.
+
+We opted for the second option, as it was simpler and easier to implement. From the start, Flint was designed with simplicity and robustness in mind and we wanted to honour this design principle. Adding generics to the language would have been a significant long-term undertaking requiring careful design and implementation. Additionally, generics seemed like a feature which could potentially introduce vulnerabilities into contract code due to bugs in the way that functions are called, and safety is one of the most important tenets of the Flint language design. We therefore deemed it preferable to keep the language simpler for the sake of limiting the impact of bugs introduced into the compiler.
+
+For the purposes of illustration, here is the resulting Asset trait Flint code:
+
+\inputminted{swift}{code/asset.flint}
+
+Note the Self in the constructor methods and the transfer method. During semantic checking, Self is replaced with the containing structure type for semantic checking purposes, allowing the existing implementation to work with no modification to how traits are checked, including overriding of default implementations and trait conformance. Following the semantic analysis step, structures conforming to traits are expanded. The expansion step is performed only when a trait has a default implementation for a function and the structure does not override it. When this is the case, we create a copy of the default function implementation and replace all occurrences of Self with the concrete structure type, adding it to the structure body in the process, ready for code generation. Code generation generates the function body just like it would generate a normal function.
+
+While implementing polymorphic Self, we encountered several problems. Initially we had assumed that trait polymorphism had already been implemented, so the idea was to implement Self by adding a series of checks and keeping the code generation pre-processing the same as it was before. This ended up not being enough, because trait polymorphism did not exist. We also had problems with Self occurring in structure initialisers since initialisers had separate argument type checks that were ignoring our replacement of Self with the concrete type.
+
+Of course, this also required many additional checks to be implemented, for example to make sure that Self is only used in traits and that it is replaced correctly in a variety of cases (for defaulted functions, overridden functions, etc), and also for type checking.
+
+\subsection{External Calls}
+
+Another important feature that we wanted to add to Flint are external calls. This is because Flint is meant to be a programming language for the Ethereum blockchain, so for it to be useful, programs and contracts written in Flint should be able to interact with pre-existing contracts written in Solidity.
+
+We had to introduce a way of declaring these external contracts and design a syntax for calling them that would ensure safety for our programs. This is detailed in our External Calls Proposal. We summarise our conclusions below.
+% TODO: proposal into appendix
+
+There were a number of problems with calling an external contract:
+
+\begin{enumerate}
+	\item Contracts are untrustworthy by default;
+	\item External calls may execute arbitrary code;
+	\item External calls may fail silently;
+	\item Interfaces may be incorrectly specified.
+\end{enumerate}
+
+For a language that aims to be safe, it is not hard to see why arbitrary code executed by another contract and calls that may fail silently would pose a problem. These were the identified solutions:
+
+\begin{enumerate}
+	\item External contracts should be considered untrustworthy, and there will not be a way to change this at the time of writing.
+	\item External calls should always be surrounded with do-catch blocks, where any call potentially throws an error, i.e. it behaves like try in Swift.
+	\item Any data related to an external call should be specified at the call site.
+	\item External calls should have a syntax distinct from regular function calls.
+\end{enumerate}
+
+To declare an external contract, an `external' trait is used. This is similar to the contract traits that were already implemented, except for a few additional limitations due to the nature of the Solidity ABI with which we want to be compatible: type states, caller protections and default implementations can not be specified; \mintinline{swift}{mutating} and \mintinline{swift}{public} keywords can not be specified on functions, and Self can not be used. External traits also have an implicit constructor that allows an `instance' to be created from an address to allow function calls, similarly to how interfaces are initialised in Solidity.
+
+Another important issue is that Solidity has significantly more integer types than Flint, such as \mintinline{c}{int64}, \mintinline{c}{int256}, \mintinline{c}{int24}. Flint only has \mintinline{swift}{Int}, which is equivalent to \mintinline{c}{int256} in Solidity. This disparity makes a one-to-one mapping of types between Solidity and Flint impossible. To solve this, we forced external traits to be specified using only Solidity types, and introduced a casting construct to convert between Solidity types and Flint types. Currently these conversions are needed when calling an external function which has Solidity-typed parameters and when retrieving the return value of an external call to convert it back to a Flint type. This construct is effectively implemented as a runtime check which ensures that the value to be converted fits its target type by comparing the sizes of the values. Checks are omitted where they are unnecessary, e.g. when converting from a smaller integer type to a larger integer type. Types such as strings are also not checked at runtime as no conversion is necessary.
+
+This is how an external trait is declared:
+
+\inputminted{swift}{code/external-trait.flint}
+
+Then, an external call should specify: the external trait instance, the function name and its arguments, and potentially its gas and Wei allocation. The last two are not part of the function’s signature, rather they are special values given to the external function to use/consume; they are implicit in the EVM. We called them `hyper-parameters' because they constitute parameters of the transaction rather than the transaction payload itself. value denotes the amount of Wei attached to the transaction to be transferred to the recipient address, and gas is the maximum execution cost that the external call is allowed.
+
+All external calls must be preceded by the `call' keyword, which differentiates them from normal function calls and allows provision of hyper-parameters. Below we illustrate the general structure of an external call:
+
+\inputminted{swift}{code/xcall-1.flint}
+
+In order to increase safety and make external calls more useful, we introduced 3 `modes' for invoking them. Below we assume the existence of the relevant external contracts and functions.
+
+\subsubsection{Default (Safe) Mode}
+
+In this mode, the external call must be located in the do part of a do-catch block. If any call inside a do-catch block fails for any reason such as running out of gas, then the catch part of the block is executed. Here is an example of this mode:
+
+\inputminted{swift}{code/xcall-2.flint}
+
+\subsubsection{Forced (unsafe) Mode}
+
+In this mode, the \mintinline{swift}{call} keyword must be followed by an exclamation mark and it does not have to be in a \mintinline{swift}{do ... catch} block. If the call fails, a transaction rollback occurs. Here is how this mode is used:
+
+\inputminted{swift}{code/xcall-3.flint}
+
+Note the use of the external trait constructor to create an instance of External from the given address and the use of the casting construct (\mintinline{swift}{as!}) to convert the result to a Flint integer. Casting modes are similar to call modes, but we currently only support casting with \mintinline{swift}{as!}, which reverts the transaction if the type conversion fails.
+
+\subsubsection{Optional (safe) Mode}
+
+Another part of our external call proposal is the Optional mode. The optional mode requires us to also introduce an \mintinline{swift}{Optional} type into Flint and support similar semantics to Swift. Because of time constraints, we have only implemented this in the parser and partially in the semantic analyzer, but not in the code generator.
+
+In this mode, the \mintinline{swift}{call} keyword is followed by a question mark and it does not have to be in a do-catch block. Instead, it has to be used in a \mintinline{swift}{if let} construct, similar to \mintinline{swift}{Optional} types in Swift.
+
+\inputminted{swift}{code/xcall-4.flint}
+
+Implementing external calls involved changes on all parts of the compiler. We modified the grammar, the lexer, and the parser in order to support all of the new constructs introduced. 
+
+We had to modify the AST passes, most notably the semantic checker and type checker, in order to make sure calls are used correctly: hyper-parameters are passed where needed and their types are correct, external trait declarations are valid according to the rules above, etc. Code generator changes that we had to make included generating the IR to call an external Solidity contract, casting between different types of integers, and recovering from errors in do-catch blocks.
+
+\subsection{Adding Unit Testing}
+
+After working for a few weeks, it became increasingly clear that the lack of proper unit testing was becoming very problematic, since we only had few signals of feature regression. While some tests already existed, they were rather ad-hoc and focused on the overall behaviour of the compiler; there was no unit testing or mocking to allow us to test smaller components in isolation, which would make it easier to track down the source of a problem.
+
+Setting up testing was a major challenge as Swift is a new language. From the start we wanted to have the ability to mock and stub protocols and classes to write effective unit tests but we found that there were several problems with this: First, Swift has very limited reflection capabilities. Reflection in Swift is read-only, which means that any kind of run-time stubbing like done in JMock\footnote{\url{http://jmock.org/}} and other Java testing frameworks is impossible. Second, the ecosystem is not yet very mature. Swift frameworks are often created by independent developers as industry adoption has been fairly slow. There are several testing frameworks on the Internet but all of them suffer from lack of maintenance, often being outdated and incompatible with Swift 4.2, the version of Swift that we are targeting.
+
+Overcoming the reflection issue meant taking an approach that is applied in other languages, such as Go, that lack powerful reflection capabilities, which is static code generation. Essentially, we create stubs and mocks for all of our protocols and classes ahead of time by analysing the source code, and compile these into our unit testing target. To enable mocks to be used in place of concrete implementations, Swift forces us to use protocols or classes as structures cannot be subclassed.
+
+Implementing this type of code generation from scratch is a significant time investment. In our search we had attempted to integrate several different frameworks, including SwiftMock\footnote{\url{https://github.com/mflint/SwiftMock}} and had even considered to write the code generation or boilerplate ourselves. After many hours of searching, we found a framework called Cuckoo\footnote{\url{https://github.com/Brightify/Cuckoo} and our fork \url{https://github.com/flintrocks/Cuckoo}} which met all of the requirements that we had:
+
+Easy integration: We want the framework to be easy to integrate into the project and into an existing codebase with minimal code changes required.
+Low boilerplating: We wish to automate the majority (or all) of the workflow.
+Easy-to-use API: Writing tests should be familiar and intuitive, an API for mock specification and verification should be similar to other established frameworks in the industry.
+
+Integrating Cuckoo proved to be a challenging task. Cuckoo was not updated for the version of Swift we were targeting, and wholly incompatible with Linux. Since our development environments were cross-platform and our continuous integration ran on Linux, we needed to keep our codebase compatible with both macOS and Linux. As a result, we made a fork of Cuckoo and its dependencies and slowly updated them to work on Swift 4.2 as well as on Linux. In the long term this means that there are additional frameworks to maintain, but the hope is that the changes that we have made can either be contributed back to the original projects or that the maintainers find some time and make their own modifications to allow Swift 4.2 and Linux compatibility.
+
+Once we had set up mocking, we had to choose a unit testing framework. We chose XCTest as it is supported by Apple and integrated into both the Swift package manager, which is used to compile the project and its dependencies, and Xcode. The Flint compiler is organised into several `modules' that allow us to use and re-use different parts of the compiler for a set of targets (tests, flintc, IDE integration, etc). With XCTest we were able to create test targets that correspond to these modules and contain tests that test code defined within those modules. Our Makefile allows us to compile all mocks and stubs prior to building the test targets themselves to guarantee that their interfaces are up to date.
+
+Writing tests is a major undertaking and should ideally have been done from the start of the project. As we did not have much time to execute a major refactoring of the codebase to make testing easier, we decided to focus on a select few units and wrote several tests for these to demonstrate how a test can be written. Writing tests retroactively requires an intricate knowledge of the functionality and specification of each unit, but in the future, further tests need to be written to increase the code coverage. In some of our work following the availability of testing in the project, we opted to use a Test Driven Development (TDD) workflow to test our assumptions and specify our code well. Below is an example of a unit test, showing the environment of an ASTPassContext stubbed with a faux testing response.
+
+\inputminted{swift}{code/unit-test.swift}
+
+\subsection{Refactoring Code Generation}
+
+We also improved the code generation phase of the Flint compiler, which enables us to implement code generation for exception handling and improves the extensibility of the code generator.
+
+Prior to our refactor, the code generator was architected around simple string concatenation. This was useful as a first prototype, demonstrating that IR conforming to the YUL specification\footnote{\url{https://solidity.readthedocs.io/en/latest/yul.html}} can be generated successfully. However, the implementation introduced complications that prohibited further extension and improvement, such as making it impossible to get a reference to the result of an expression.
+
+With the initial implementation, it was impossible to generate code for external calls since we needed to store the success status of external calls, in addition to value returned. We attempted to refactor the code generator (see \href{https://github.com/flintrocks/flint/pull/127}{\#127}) to return a tuple consisting of a preamble and an expression where the preamble represented ‘setup’ code and the expression was simply an identifier pointing to the result of evaluating the code. However, this would have introduced massive duplication of code when we concatenated ‘preamble’ code from subexpressions. It was also fragile and error-prone due to the lack of types in the generated code.
+
+Our new code generator is organised in a way that mirrors the APIs found in the code generator for LLVM IR\footnote{\url{https://llvm.org/}} and the compiler for the Rust language\footnote{\url{https://www.rust-lang.org/}}. YUL code is generated by emitting to `blocks', which feature proper lexical scoping. The new code generator is stateful and keeps track of the current block which the code generator is emitting to. This allows us to handle code generation for external calls easily with less work involved in backtracking in the code generation process. It also helped us avoid generating some duplicate code. Our new code generator allows for new behaviour to be implemented much more easily by utilising the type safety of Swift. In particular, we emit code to the current block for setup code statements, then we merely return YUL expression objects denoting the results of the setup code. 
+
+A challenge with using the YUL IR was the lack of jump instructions in the IR. This made code generation for do-catch statements difficult. When handling external calls with do-catch, the program needs to resume at the error handling block as soon as an error is detected at runtime, but without a jump instruction this was difficult. Consider the following pseudo-Flint program which includes nested \mintinline{swift}{do ... catch} blocks and multiple external calls in the \mintinline{swift}{do} block.
+
+\inputminted{swift}{code/do-catch-1.flint}
+
+In our solution we avoided the need for jump instructions at the cost of some code duplication. The above example translates into the following fragment (psuedo-code to avoid clutter):
+
+\inputminted{swift}{code/do-catch-2.flint}
+
+When we have multiple external calls in the \mintinline{swift}{do} block, the error handling code from the nearest catch block needs to be duplicated multiple times, once for each possible `failure' of an external call. This would be unnecessary if YUL contained syntax for handling jump/goto behaviour. We tackle this problem by keeping track of a stack of \mintinline{swift}{do ... catch} blocks that we are in. This allows us to identify the \mintinline{swift}{else} block to use once we encounter \mintinline{swift}{call ...} statements. Consider the case where we generate code for \mintinline{swift}{call f}, we first generate code for the function call of f, the success status of that call then gets assigned to a variable. We then generate an \mintinline{swift}{if} statement where the \mintinline{swift}{else} block includes a copy of the error handling code from the most recent \mintinline{swift}{do ... catch} level we are in. We then resume the code generation by emitting code to the \mintinline{swift}{then} block of the generated \mintinline{swift}{if} statement.
+
+Another software engineering group worked on improving the YUL IR and implementing a new compiler for YUL. Their implementation might introduce useful extensions to YUL. With this refined design, we can easily extend our YUL definitions and utilise these new extensions.
+
+\subsection{General Improvements and Technical Challenges}
+
+A common theme during this project has been the risk associated with modifying any part of the already existing codebase due to the technical debt accrued over time. Many features that we had assumed should work based on previous tickets and documentation were in fact only partially implemented or not implemented at all. When implementing a new feature we often uncovered other problems which were all interconnected, making it very easy to get sidetracked by also solving the additional issues found.
+
+Our way of mitigating this risk was to try and prioritise implementing features that were simpler overall, to keep the amount of surrounding codebase maintenance work minimal.  Thus, some of our effort has also gone into refactoring, improving and fixing features that were already there.
+
+One example of an improvement that we made was the unification of the event declaration syntax with the function declaration syntax. Events and functions in Flint are called in a very similar fashion, the main difference being that event calls are preceded by the \mintinline{swift}{emit} keyword. Following a discussion with our supervisor and the previous maintainers of the compiler, we decided to make the syntax for declaring the two constructs similar.
+
+As part of this change, we found serious issues with event calls. The types of event call arguments were not checked correctly and even though events could be declared with default parameter values, these were ignored during the compilation process. We did not expect to have such issues, and so, as part of a simple syntax change, we also added a new pass to account for adding the default parameter values to event and function calls. We also re-wrote the argument type-checking logic as well as enforcing callsite labels and argument order, like Swift does.
+
+Below is an example showcasing the unified event syntax (note the use of default parameters):
+
+\inputminted{swift}{code/events.flint}
+
+We discovered that the dot operator was right-associative, a consequence of the default behavior of a recursive descent parser. The code on the right-hand side of the dot operator would be parsed first and then combined with the code on the left-hand side. As such, \mintinline{swift}{a.b.c.d} would be parsed as \mintinline{swift}{a.(b.(c.d))} which meant that accessing nested structs and struct fields such as, \mintinline{swift}{a.b.c.d}, was very unintuitive or completely impossible. To solve this, we introduced a new AST pass that performs left rotations on certain binary expressions to make them left-associative. Tests have been added to check that we now recover the correct associativity for the dot operator.
+
+Apart from fixing the existing compiler, another technical challenge was the fact that we had to work in Swift, with which only two of our group members had previous experience. We tried to overcome this by pairing an experienced member with an inexperienced member to help them get up to speed at the start of the project. Two of our group members worked on Linux causing a bit of a delay at the start of the project because of the work required to get Swift and all of the project's dependencies to run. Our workflow changes at the start of the project, such as the introduction of the linter and reformatting of the codebase, helped the less experienced group members write better code.
+
+Towards the end of our project, we realised the language guide for Flint was incoherently structured and not very well-maintained. The more recent features were not documented and some documented features were no longer working in the language. The latter category went by unnoticed because there were no integration tests for these features, if they even worked before the beginning of our project. The new language guide is available in the appendix.

@@ -1,0 +1,4 @@
+external trait External {
+  func test() -> int256
+  func test2(param: int48) -> int24
+}

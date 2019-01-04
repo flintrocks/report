@@ -1,0 +1,70 @@
+\section{Existing Codebase}
+
+We have built on top of an already existing codebase as part of our project. At the time that we began working, this consisted of a demo-able Flint compiler written in Swift, which compiled a Flint source file to a Solidity contract with YUL IR in an assembly statement representing the code of the Flint contract. The compiler processes the Solidity contract with the Solidity compiler to produce EVM bytecode. It was mainly structured as follows:
+
+\subsection{Lexer and Parser}
+
+A lexer which tokenized an input source file.
+
+A handwritten, recursive-descent parser. This created an Abstract Syntax Tree (AST) from a tokenized input file, possibly outputting meaningful error messages in case of parser errors.
+
+There were also a number of existing classes for the AST nodes; we will not go through all of them here, but they covered the necessary parts of the language, such as contracts, declarations, expressions, and components.
+
+\subsection{AST Passes}
+
+A number of AST passes working on different levels of the compilation process once the AST was available. These were invoked using an AST visitor, which specified the order of calling a \mintinline{swift}{process} and a \mintinline{swift}{postProcess} function for each AST node, with the default implementations of these doing nothing. Default stub implementations were specified in a protocol that all pass implementations had to conform to. Then, each pass only had to provide implementations for the functions relevant to its role.
+
+Some of the existing passes were the Semantic Analyzer, which checked for semantic errors in the input, such as trying to declare the same function twice; the Type Checker; and the IR Preprocessor, which applied final transformations to the AST right before code generation, such as copying default implementations from traits. 
+
+An environment was used to collect information about the program. Each of these passes could add errors, warnings, and notes to a list of diagnostics. If any errors were encountered, the compilation would not succeed. Notably, the IR code generation itself was not implemented using the existing AST pass template, but rather a custom-made visitor pattern.
+
+\subsection{Example Files and Tests}
+
+The Flint project provided a number of invalid and valid source files as examples and for integration testing. The integration testing files were used to test three stages of the compilation; parsing, semantic analysis, and behaviour of the code.
+
+The overall structure of the project in the beginning is illustrated on figure \ref{flint-compilation}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[%
+	main node/.style={
+		rectangle,
+		fill=gray!20,
+		draw,
+		minimum width=3cm,
+		minimum height=1.3cm,
+		inner sep=0pt,
+		%text height=1.5ex,
+		text width=3cm,
+		%text depth=.25ex,
+		align=center
+	},
+	large node/.style={
+		rectangle,
+		fill=gray!20,
+		draw,
+		minimum width=4cm,
+		minimum height=2.3cm,
+		inner sep=0pt,
+		%text height=1.5ex,
+		text width=4cm,
+		%text depth=.25ex,
+		align=center
+	}
+]
+	\node[main node] (1) {Source code};
+	\node[main node] (2) [right = 2.5cm of 1] {Tokens};
+	\node[main node] (3) [right = 2.5cm of 2] {AST};
+	\node[large node] (4) [below = 1cm of 3] {Processed AST + Additional program information};
+	\node[main node] (5) [left = 2cm of 4] {YUL representation};
+	\node[main node] (6) [left = 2.5cm of 5] {Binary};
+	\path[draw,thick,->]
+	(1) edge node [above] {Lexer} (2)
+	(2) edge node [above] {Parser} (3)
+	(3) edge node [right] {AST passes} (4)
+	(4) edge node [above,text width=1.9cm,align=center] {IR generation} (5)
+	(5) edge node [above,text width=1.9cm,align=center] {Solidity compiler} (6);
+\end{tikzpicture}
+\caption{Graphic representation of the Flint compilation process.}
+\label{flint-compilation}
+\end{figure}
