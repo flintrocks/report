@@ -55,8 +55,17 @@
 
 \printbibliography[heading=bibintoc]
 
-\chapter*{Appendix}
-\label{chp:appendix}
-\addcontentsline{toc}{chapter}{\nameref{chp:appendix}}
+% make links blue
+\hypersetup{colorlinks,urlcolor=blue,pdfborderstyle={/S/U/W 1}}
+
+\chapter*{Appendix A: External Calls Proposal}
+\label{chp:appendix-a}
+\addcontentsline{toc}{chapter}{\nameref{chp:appendix-a}}
+\input{chapters/appendix-proposal}
+
+\chapter*{Appendix B: Language guide}
+\label{chp:appendix-b}
+\addcontentsline{toc}{chapter}{\nameref{chp:appendix-b}}
+\input{chapters/appendix-guide}
 
 \end{document}

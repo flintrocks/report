@@ -1,0 +1,2000 @@
+First of all, thank you for the interest in Flint!
+
+Even though the \href{https://www.ethereum.org/}{Ethereum} platform requires smart contract programmers to ensure the correct behaviour of their program before deployment, it has not seen a language designed with safety in mind. Solidity and others do not tailor for Ethereum’s unique programming model and instead, mimic existing popular languages like JavaScript, Python, or C, without providing additional safety mechanisms.
+
+Flint changes that, as a new programming language built for easily writing safe Ethereum smart contracts. Flint is approachable to both experienced and new Ethereum developers, and presents a variety of security features. Much of the language syntax is inspired by \href{https://swift.org/}{the Swift language}, making it more approachable than Solidity.
+
+For a quick start, please have a look at the \hyperref[sec:appendix-b-installation]{Installation} section first, followed by the \hyperref[sec:appendix-b-example]{Example} section.
+
+\section{Getting started}
+\label{sec:appendix-b-getting-started}
+
+\subsection{Installation}
+\label{sec:appendix-b-installation}
+
+The first step before using the Flint compiler is to install it. The simplest way is to \hyperref[sec:appendix-b-docker]{use Docker}. Otherwise, the \hyperref[sec:appendix-b-binary-packages]{binary packages} and \hyperref[sec:appendix-b-building-from-source]{building from source} require \hyperref[sec:appendix-b-installing-solc-the-solidity-compiler]{\mintinline{bash}{solc} to be installed first}.
+
+\subsubsection{Docker}
+\label{sec:appendix-b-docker}
+
+The Flint compiler and its dependencies can be installed using \href{https://www.docker.com/}{Docker}:
+
+\begin{minted}{bash}
+$ git clone https://github.com/flintlang/flint.git
+$ cd flint
+$ docker build -t flint .
+$ docker run -it flint
+\end{minted}
+
+\subsubsection{Installing \mintinline{bash}{solc}, the Solidity compiler}
+\label{sec:appendix-b-installing-solc-the-solidity-compiler}
+
+A non-Docker Flint install requires the \href{https://github.com/ethereum/solidity}{Solidity} compiler \mintinline{bash}{solc} to be installed. For full installation instructions, see the \href{https://solidity.readthedocs.io/en/latest/installing-solidity.html}{Solidity documentation}.
+
+\subsubsection{Binary packages}
+\label{sec:appendix-b-binary-packages}
+
+Flint is compatible with macOS and Linux platforms, and can be installed by downloading a built binary directly. Installing \mintinline{bash}{solc} is a pre-requisite for using the binary packages.
+
+The latest releases are available on the \href{https://github.com/flintlang/flint/releases}{GitHub releases page}.
+
+\subsubsection{Building from source}
+\label{sec:appendix-b-building-from-source}
+
+The Flint compiler is written in \href{https://swift.org/}{Swift}, and requires the Swift compiler to be installed. See the \href{https://swift.org/download/#releases}{Swift download page} for latest releases.
+
+\begin{quote}
+For older macOS machines and some Linux distributions it may be easier to use \mintinline{bash}{swiftenv}. See the \href{https://swiftenv.fuller.li/en/latest/}{\mintinline{bash}{swiftenv} website} for installation instructions.
+\end{quote}
+
+Once Swift is installed, Flint can be compiled by cloning the GitHub repository and invoking \mintinline{bash}{make}:
+
+\begin{minted}{bash}
+$ git clone https://github.com/flintlang/flint.git
+$ cd flint
+$ swiftenv install # only if using swiftenv
+$ make
+\end{minted}
+
+The built binary will be available in \mintinline{bash}{.build/debug/flintc}. You can then add \mintinline{bash}{flintc} to your \mintinline{bash}{PATH} using:
+
+\begin{minted}{bash}
+$ export PATH=$PATH:`pwd`/.build/debug/flintc
+\end{minted}
+
+If you are planning to contribute to the Flint project or wish to run the tests, please also install:
+
+\begin{itemize}
+	\item \href{https://nodejs.org/en/}{Node.js}
+	\item \href{https://truffleframework.com}{The Truffle suite} - for testing contracts and running the integration tests
+	\item \href{https://github.com/realm/SwiftLint}{SwiftLint} - to ensure there are no stylistic or formatting issues with the code
+\end{itemize}
+
+\subsection{Example}
+\label{sec:appendix-b-example}
+
+This section demonstrates the full workflow of writing a smart contract in Flint, compiling it, testing it locally using Truffle, and deploying it to the Ethereum network.
+
+\subsubsection{Creating a simple contract}
+\label{sec:appendix-b-creating-a-simple-contract}
+
+The first step is to create a Flint source file. Our example smart contract will be a simple counter. It will have a state – the number of `hits'. Its current value can be displayed by calling its \mintinline{swift}{getValue} function. Its value can be increased by paying some Wei to its \mintinline{swift}{hit} function.
+
+We create a file called \mintinline{bash}{main.flint} and put the following code in it:
+
+\begin{minted}{swift}
+// This is the declaration of the contract. In this simple example, it only
+// includes the one state variable, `hits`.
+contract Counter {
+  // `hits` will initially be `0` and it will be an integer variable (`Int`).
+  var hits: Int = 0
+}
+
+// These are the functions of the contract. The `:: (any)` indicates that
+// these functions can be called by anyone on the Ethereum network.
+Counter :: (any) {
+  // This is the constructor, called when the contract is first created. There
+  // is nothing we need to do here at this point, so it is empty.
+  public init() {}
+
+  // This function returns the current counter value. It takes no arguments,
+  // but returns an `Int`.
+  public func getValue() -> Int {
+    return hits
+  }
+
+  // This function increates the counter value by one. It only does this if
+  // some Wei was paid, so the function is `@payable`. The amount of Wei paid
+  // is available as the implicit `value` argument, although we do not use this
+  // value here.
+  @payable
+  public mutating func hit(implicit value: Wei) {
+    hits += 1
+  }
+}
+\end{minted}
+
+\subsubsection{Compiling \mintinline{swift}{Counter}}
+\label{sec:appendix-b-compiling-counter}
+
+We can compile \mintinline{swift}{Counter} to the Solidity contract file \mintinline{bash}{contracts/main.sol} using the terminal command:
+
+\begin{minted}{bash}
+$ flintc main.flint --emit-ir --ir-output contracts
+\end{minted}
+
+\subsubsection{Testing \mintinline{swift}{Counter}}
+\label{sec:appendix-b-testing-counter}
+
+Even though \mintinline{swift}{Counter} is extremely simple, we should test it before deploying it to the Ethereum network.
+
+During early iterations, it may be useful to debug a contract directly with the Remix IDE. This is detailed in a \hyperref[sec:appendix-b-remix-integration]{separate section}.
+
+Writing unit tests for Solidity (and hence Flint) contracts is possible with the Truffle framework. Unfortunately, it is necessary to provide some boilerplate code for the tests to work. This consists of:
+
+\begin{enumerate}
+	\item Create a \mintinline{bash}{Migrations.sol} file in the \mintinline{bash}{contracts} directory (alongside the Flint-generated \mintinline{bash}{main.sol}) with the content:\\
+\begin{minted}{javascript}
+pragma solidity ^0.4.2; contract Migrations {}
+\end{minted}
+	\item Create a \mintinline{bash}{1.js} file in a new directory called \mintinline{bash}{migrations} with the content:\\
+\begin{minted}{javascript}
+var Contract = artifacts.require("./Counter.sol");
+module.exports = (deployer) => deployer.deploy(Contract);
+\end{minted}
+	\item Create a \mintinline{bash}{truffle.js} file with the content:\\
+\begin{minted}{javascript}
+module.exports = {};
+\end{minted}
+\end{enumerate}
+
+Finally, we can create a \mintinline{bash}{test.js} file with the unit tests:
+
+\begin{minted}{javascript}
+var Contract = artifacts.require("./Counter.sol");
+var Interface = artifacts.require("./_InterfaceCounter.sol");
+Contract.abi = Interface.abi;
+
+contract("Counter", function(accounts) {
+  it("should be possible to deploy the counter", async function() {
+    await Contract.deployed();
+  });
+  it("should be possible to increase the counter value", async function() {
+    let counter = await Contract.deployed();
+    await counter.deposit({value: 10});
+  });
+  it("should have a zero value initially", async function() {
+    let counter = await Contract.deployed();
+    let value = await counter.getValue();
+    assert.equal(value.valueOf(), 0);
+  });
+  it("should be possible to interact with the counter", async function() {
+    let counter = await Contract.deployed();
+    var value;
+
+    value = await counter.getValue();
+    assert.equal(value.valueOf(), 0);
+
+    await counter.deposit({value: 10});
+
+    value = await counter.getValue();
+    assert.equal(value.valueOf(), 1);
+
+    value = await counter.getValue();
+    assert.equal(value.valueOf(), 1);
+
+    await counter.deposit({value: 10});
+
+    value = await counter.getValue();
+    assert.equal(value.valueOf(), 2);
+
+    await counter.deposit({value: 10});
+
+    await counter.deposit({value: 10});
+
+    value = await counter.getValue();
+    assert.equal(value.valueOf(), 4);
+  });
+});
+\end{minted}
+
+We can then run these unit tests using:
+
+\begin{minted}{bash}
+$ truffle test test.js
+\end{minted}
+
+\subsubsection{Deploying \mintinline{swift}{Counter}}
+\label{sec:appendix-b-deploying-counter}
+
+Finally, we can deploy our contract to the Ethereum network. Note that this may cost real money and the \mintinline{swift}{Counter} contract is not terribly useful!
+
+Since Flint produces Solidity contracts, they can be deployed by following a standard guide, such as \href{https://medium.com/mercuryprotocol/dev-highlights-of-this-week-cb33e58c745f}{this one}.
+
+\subsection{IDE integration}
+\label{sec:appendix-b-ide-integration}
+
+The Flint compiler has options to integrate with \hyperref[sec:appendix-b-vs-code]{VS Code}, \hyperref[sec:appendix-b-vim]{Vim}, and \hyperref[sec:appendix-b-atom]{Atom}, although Vim and Atom currently only support syntax highlighting, not inline error / warning display.
+
+\subsubsection{VS Code}
+\label{sec:appendix-b-vs-code}
+
+Experimental support is provided for VS Code via a \href{https://langserver.org/}{LSP} plugin available at \href{https://github.com/flintrocks/vscode-flint}{\mintinline{bash}{vscode-flint}}. The \mintinline{bash}{vscode-flint} repository needs to be opened in VS Code as a project, then run in debug mode. Assuming the Flint compiler was built and the \mintinline{bash}{langsrv} executable was created, this should provide errors and diagnostics in Flint files.
+
+\subsubsection{Vim}
+\label{sec:appendix-b-vim}
+
+Syntax highlighting can be activated in Vim by using the following command in the Flint repository:
+
+\begin{minted}{bash}
+$ ditto utils/vim ~/.vim
+\end{minted}
+
+\subsubsection{Atom}
+\label{sec:appendix-b-atom}
+
+Syntax highlighting in Atom can be obtained by installing the \href{https://atom.io/packages/language-flint}{\mintinline{bash}{language-flint} package}.
+
+\subsection{Compilation}
+\label{sec:appendix-b-compilation}
+
+Flint compiles Flint source code to \href{https://solidity.readthedocs.io/en/latest/yul.html}{YUL IR} wrapped in Solidity contracts. These can then be compiled into EVM bytecode using the Solidity compiler, and deployed to the Ethereum blockchain using a standard client or the Truffle framework.
+
+A Flint source file named \mintinline{bash}{main.flint} containing a contract \mintinline{swift}{Counter} can be compiled to a Solidity file using:
+
+\begin{minted}{bash}
+$ flintc main.flint --emit-ir
+\end{minted}
+
+You can view the generated code using:
+
+\begin{minted}{bash}
+$ cat bin/main/Counter.sol
+\end{minted}
+
+The Solidity compiler \mintinline{bash}{solc} can be used to compile \mintinline{bash}{.sol} files to EVM bytecode. This step can be done automatically by \mintinline{bash}{flintc} (internally invoking \mintinline{bash}{solc}) instead by using:
+
+\begin{minted}{bash}
+$ flintc main.flint --emit-bytecode
+\end{minted}
+
+There are more command-line options available in \mintinline{bash}{flintc}. To show a full listing, use:
+
+\begin{minted}{bash}
+$ flintc --help
+\end{minted}
+
+\subsection{Remix integration}
+\label{sec:appendix-b-remix-integration}
+
+\href{https://remix.ethereum.org/}{Remix} is an online IDE for testing Solidity smart contracts. Flint contracts can also be tested in Remix, by compiling Flint to Solidity. In this example, we are going to test the \mintinline{swift}{Counter} contract from the \hyperref[sec:appendix-b-example]{example section}
+
+After \hyperref[sec:appendix-b-compilation]{compiling} the \mintinline{swift}{Counter} contract, we can obtain the Solidity program in the file \mintinline{bash}{bin/main/Counter.sol}. To interact with this contract in Remix:
+
+\begin{enumerate}
+	\item Copy the contents of \mintinline{bash}{bin/main/Counter.sol} and paste the code into Remix.
+	\item Press the red Create button under the Run tab in the right sidebar.
+	\item You should now see your deployed contract below. Click on the copy button on the right of \mintinline{swift}{Counter} to copy the address of the deployed contract.
+	\item Select \mintinline{swift}{_InterfaceMyContract} from the dropdown above the Create button.
+	\item Paste the contract address (from step 3) into the `Load contract from Address' field, and press the At Address button.
+	\item You should now see the public functions declared by your contract (\mintinline{swift}{getValue}, \mintinline{swift}{hit}). Red buttons indicate the functions are mutating, whereas blue indicated non-mutating. You should now be able to call the contract's functions.
+\end{enumerate}
+
+\section{Language guide}
+\label{sec:appendix-b-language-guide-1}
+
+\subsection{File structure}
+\label{sec:appendix-b-file-structure}
+
+Flint files consist of one or more \hyperref[sec:appendix-b-contracts]{contract declarations}, and optionally \hyperref[sec:appendix-b-structs]{struct declarations}, \hyperref[sec:appendix-b-traits]{trait declarations}, \hyperref[sec:appendix-b-external-calls]{external contract declarations}, and/or \hyperref[sec:appendix-b-enumerations]{enumerations}.
+
+\subsubsection{Comments}
+\label{sec:appendix-b-comments}
+
+Comments may be used throughout the source code. Comments are started with a double slash \mintinline{swift}{//} and continue to the end of that line.
+
+\subsection{Types}
+\label{sec:appendix-b-types}
+
+Flint is a statically-typed language with a simple type system, with basic support for subtyping through \hyperref[sec:appendix-b-traits]{traits}.
+
+\begin{quote}
+\textbf{Planned feature}
+
+Currently, the types of all constants, variables, function arguments, etc. have to be explicitly declared. Type inference is a planned feature.
+\end{quote}
+
+Flint is a type-safe language. A type safe language encourages clarity about the types of values your code can work with. It performs type checks when compiling code and flags any mismatched types as errors. This enables you to catch and fix errors as early as possible in the development process.
+
+\subsubsection{Basic types}
+\label{sec:appendix-b-basic-types}
+
+\begin{tabularx}{\textwidth}{lX}
+	Type & Description\\\hline
+	\texttt{Int} & 256-bit integer.\\
+	\texttt{Address} & 160-bit Ethereum address.\\
+	\texttt{Bool} & Boolean value.\\
+	\texttt{String} & String value. Currently limited to 256 bits, i.e. 32 bytes.\\
+	\texttt{Void} & Non-value. Note that the \texttt{Void} type is never directly used. It is implicit when a function has no return type.
+\end{tabularx}
+
+\subsubsection{Dynamic types}
+\label{sec:appendix-b-dynamic-types}
+
+\begin{tabularx}{\textwidth}{llX}
+	Name & Type (in code) & Description\\\hline
+	Dynamic-size list & \texttt{[T]} & A list of elements of type \texttt{T}. Elements can be added to it or removed from it.\\
+	Fixed-size list & \texttt{T[n]} & A list containing \texttt{n} elements of type \texttt{T}. It cannot have a different number of elements than its declared capacity \texttt{n}.\\
+	Dictionary & \texttt{[K: V]} & Dynamic-size mappings from one key type \texttt{K} to a value type \texttt{V}. Each stored key of type \texttt{K} is associated with one value of type \texttt{V}.\\
+	Polymorphic self & \texttt{Self} & See \hyperref[sec:appendix-b-polymorphic-self]{polymorphic self}.\\
+	Structs & & Structs (structures), including \hyperref[sec:appendix-b-structs]{user-defined structs}.
+\end{tabularx}
+
+\subsubsection{Range types}
+\label{sec:appendix-b-range-types}
+
+Flint includes two range types, which are shortcuts for expressing ranges of values. These can only be used with \mintinline{swift}{for-in} loops.
+
+The half-open range (\mintinline{swift}{a..<b}) defines a range that runs from \mintinline{swift}{a} to \mintinline{swift}{b}, but does not include \mintinline{swift}{b}.
+
+\begin{minted}{swift}
+for let i: Int in (0..<5) {
+  // i will be 0, 1, 2, 3, 4 on separate iteratons
+}
+\end{minted}
+
+The open range operator (\mintinline{swift}{a...b}) defines a range that runs from \mintinline{swift}{a} to \mintinline{swift}{b} and does include \mintinline{swift}{b}.
+
+\begin{minted}{swift}
+for let i: Int in (0...5) {
+  // i will be 0, 1, 2, 3, 4, 5 on separate iteratons
+}
+\end{minted}
+
+At the moment, both \mintinline{swift}{a} and \mintinline{swift}{b} must be integer literals, not variables!
+
+\begin{quote}
+\textbf{Planned feature}
+
+In the future, it will be possible to iterate up to an arbitrary value. See https://github.com/flintlang/flint/issues/397.
+\end{quote}
+
+\subsubsection{Solidity types}
+\label{sec:appendix-b-solidity-types}
+
+When specifying an \hyperref[sec:appendix-b-external-calls]{external interface}, Solidity types must be used. The types usable in Flint are:
+
+\begin{itemize}
+	\item \mintinline{swift}{int8}, \mintinline{swift}{int16}, \mintinline{swift}{int24}, ... \mintinline{swift}{int256} (all multiples of 8 bits)
+	\item \mintinline{swift}{uint8}, \mintinline{swift}{uint16}, \mintinline{swift}{uint24}, ... \mintinline{swift}{uint256} (all multiples of 8 bits)
+	\item \mintinline{swift}{address}
+	\item \mintinline{swift}{string}
+	\item \mintinline{swift}{bool}
+	\item \mintinline{swift}{bytes32}
+\end{itemize}
+
+See \hyperref[sec:appendix-b-casting-to-and-from-solidity-types]{casting} for more information.
+
+\subsection{Constants and variables}
+\label{sec:appendix-b-constants-and-variables}
+
+Constants and variables associate a name with a value of a particular \hyperref[sec:appendix-b-types]{type}. The value of a constant cannot be changed once it is set, whereas a variable can be set to a different value with assignment statements.
+
+Constants and variables of a contract are its state properties. They are data stored in the EVM storage, and even though they are not directly modifiable, they are publicly visible, so they should never hold private or sensitive data.
+
+Otherwise, local constants and variables are declared inside functions. These are specific to a given transaction, stored in the EVM memory. Even though these terms are not part of a contract's state, if they are part of an executed transaction their values will still be recorded in the transaction history.
+
+To declare a constant with the name \mintinline{swift}{<name>} of the type \mintinline{swift}{<type>} with the initial value being the result of \mintinline{swift}{<expression>}:
+
+\begin{minted}{swift}
+let <name>: <type> = <expression>
+\end{minted}
+
+The expression is evaluated once, when the declaration is executed. The expression can be complex, or just a simple \hyperref[sec:appendix-b-literals]{literal}. Examples:
+
+\begin{minted}{swift}
+let unity: Int = 1
+let answer: Int = 7 * 6
+let usingFlint: Bool = true
+let digitsOfPi: [Int] = [3, 1, 4, 1, 5, 9, 2, 6]
+let structExample: Rectangle = Rectangle(width: 30, height: 40)
+\end{minted}
+
+If a constant is a state property of a contract, it may be given no initial value, but in that case it must be set in each initialiser of that contract:
+
+\begin{minted}{swift}
+let <name>: <type>
+\end{minted}
+
+To declare a variable with the name \mintinline{swift}{<name>} of the type \mintinline{swift}{<type>} with the initial value being the result of \mintinline{swift}{<expression>} (see \hyperref[sec:appendix-b-expressions]{expressions}), the syntax is the same, but \mintinline{swift}{var} is used instead of \mintinline{swift}{let}:
+
+\begin{minted}{swift}
+var <name>: <type> = <expression>
+\end{minted}
+
+Examples:
+
+\begin{minted}{swift}
+var counter: Int = 0
+var areWeThereYet: Bool = false
+\end{minted}
+
+The value of a variable or a constant can be used in expressions once it is declared, simply by writing its name.
+
+\subsection{Functions}
+\label{sec:appendix-b-functions}
+
+Functions are self-contained blocks of code that perform a specific task, which are called using their identifier. They are defined with the keyword \mintinline{swift}{func} followed by the identifier and the set of parameters and optional return type:
+
+To declare a function with the name \mintinline{swift}{<name>} returning a value of type \mintinline{swift}{<type>}, taking the list of \hyperref[sec:appendix-b-function-parameters]{parameters \mintinline{swift}{<parameters>}}, optionally with \hyperref[sec:appendix-b-function-modifiers]{modifiers \mintinline{swift}{<modifiers>}} and \hyperref[sec:appendix-b-function-attributes]{attributes \mintinline{swift}{<attributes>}}:
+
+\begin{minted}{swift}
+<attributes>
+<modifiers> func <name>(<parameter-1>, <parameter-2>, ...) -> <type> {
+  // statements
+}
+\end{minted}
+
+Some functions do not return a value:
+
+\begin{minted}{swift}
+<attributes>
+<modifiers> func <name>(<parameter-1>, <parameter-2>, ...) {
+  // statements
+}
+\end{minted}
+
+\subsubsection{Function attributes}
+\label{sec:appendix-b-function-attributes}
+
+Attributes annotate functions as having special properties. Currently the only example of this is \mintinline{swift}{@payable}. For more information, see \hyperref[sec:appendix-b-payable]{payable}.
+
+\subsubsection{Function modifiers}
+\label{sec:appendix-b-function-modifiers}
+
+In Flint all functions are \mintinline{swift}{private} by default and as such can only be accessed from within the contract body. This can be changed using access modifiers:
+
+\begin{itemize}
+	\item \mintinline{swift}{public} access enables functions to be used within their contract and exposes the function to the interface of the contract as a whole when compiled. Other contracts and users on the Ethereum network may call \mintinline{swift}{public} functions directly.
+	\item \mintinline{swift}{private} access (default and not a keyword that is explicitly set) only enables functions to be used within their contract.
+\end{itemize}
+
+Examples:
+
+\begin{minted}{swift}
+func giveOutMoney(to: Address) {
+  // only callable from other contract functions
+}
+
+public func takeMoney(from: Address) {
+  // can be called by Ethereum users and contracts
+}
+\end{minted}
+
+Smart contracts can remain in activity for a large number of years, during which a large number of state mutations can occur. To aid with reasoning, Flint functions cannot mutate smart contracts’ state by default. This helps avoid accidental state mutations when writing the code, and allows readers to easily draw their attention to the mutating functions of the smart contract.
+
+Naturally, it is sometimes desirable to write a function that changes the state properties of its contract. This is enabled with the \mintinline{swift}{mutating} modifier:
+
+Examples:
+
+\begin{minted}{swift}
+contract Counter {
+  var hits: Int = 0
+}
+
+Counter :: (any) {
+  // This would be a compile-time error - the function needs to be declared
+  // with `mutating`!
+  //public func incrementA() {
+  //  hits += 1
+  //}
+
+  // This can compile:
+  mutating public func incrementB() {
+    hits += 1
+  }
+}
+\end{minted}
+
+\subsubsection{Function parameters}
+\label{sec:appendix-b-function-parameters}
+
+Functions can also take parameters which can be used within the function. These must be declared in the function signature. Flint also supports parameters that take default values, but no non-defaulted parameter may follow one that has a default value.
+
+Each parameter has the syntax:
+
+\begin{minted}{swift}
+<modifiers> <name>: <type modifiers> <type>
+\end{minted}
+
+Currently the only possible (optional) \mintinline{swift}{<modifier>} is \mintinline{swift}{implicit}. See \hyperref[sec:appendix-b-payable]{payable} for more information. The only possible (optional) \mintinline{swift}{<type modifier>} is \mintinline{swift}{inout}. See \hyperref[sec:appendix-b-structs-as-function-arguments]{inout} for more information.
+
+Below is a function that \hyperref[sec:appendix-b-function-modifiers]{mutates} the dictionary of peoples' names to add the key/value pair of the caller's address and the given name. If the parameter \mintinline{swift}{name} is not provided to the function call, then the default value of \mintinline{swift}{"John Doe"} will be used. For more information about callers, see \hyperref[sec:appendix-b-caller-group-variable]{caller bindings}.
+
+\begin{minted}{swift}
+contract AddressBook {
+  var people: [Address: String]
+}
+
+AddressBook :: caller <- (any) {
+  mutating func remember(name: String = "John Doe") {
+    people[caller] = name
+  }
+}
+\end{minted}
+
+\subsubsection{Return values}
+\label{sec:appendix-b-return-values}
+
+You can optionally indicate the return type of a function with the return arrow \mintinline{swift}{->}, which is followed by the return type. Inside the function, a \mintinline{swift}{return} statement must be used, to return a value of the same type as the declared return type.
+
+Example:
+
+\begin{minted}{swift}
+func hello() -> String {
+  return "Hello, world!"
+}
+\end{minted}
+
+If the return type is omitted, the function is considered a \mintinline{swift}{Void} function, and a call to it cannot be used in expressions as a value.
+
+\subsubsection{Initialisers}
+\label{sec:appendix-b-initialisers}
+
+Initialisers are special functions called to create a struct or contract instance. The syntax is slightly different:
+
+\begin{minted}{swift}
+<modifiers> init(<parameter-1>, <parameter-2>, ...) {
+  // statements
+}
+\end{minted}
+
+The statements that can be used in initialisers are limited to `simple' statements, which means no external calls, control flow statements, etc. After an initialiser is executed, all the state properties of its containing struct or contract should have a value.
+
+\subsubsection{Payable}
+\label{sec:appendix-b-payable}
+
+(Contract-specific.)
+
+When a user creates a transaction to call a function, they can attach Wei to send to the contract. Functions which expect Wei to be attached when called must be annotated with the \mintinline{swift}{@payable} annotation, otherwise the transaction will revert when the function is called.
+
+When adding the annotation, a parameter marked \mintinline{swift}{implicit} of type \mintinline{swift}{Wei} must be declared. \mintinline{swift}{implicit} parameters are a mechanism to expose information from the Ethereum transaction to the developer of the smart contract, without using globally accessible variables defined by the language, such as \mintinline{swift}{msg.value} in Solidity. This mechanism allows developers to name \mintinline{swift}{implicit} variables themselves, and they need not remember the name of a global variable.
+
+Functions in Flint can be marked as payable using the \mintinline{swift}{@payable} attribute. The amount of Wei sent is bound to an implicit variable:
+
+\begin{minted}{swift}
+@payable
+public func receiveMoney(implicit value: Wei) {
+  doSomething(value)
+}
+\end{minted}
+
+Payable functions may have an arbitrary amount of parameters, but exactly one needs to be implicit and of a currency type. There may only be one function marked \mintinline{swift}{@payable} in a contract.
+
+\subsubsection{Fallback}
+\label{sec:appendix-b-fallback}
+
+(Contract-specific.)
+
+Fallback functions are another special kind of function, with a slightly modified declaration syntax:
+
+\begin{minted}{swift}
+public fallback() {
+  // statements
+}
+\end{minted}
+
+Fallback functions should only contain `simple' statements, just like initialisers. They are called whenever an attempt has been made to call a non-existent function of the containing contract. This may happen e.g. if the caller used an incorrect signature for the call. Oftentimes the Gas allocation for fallback execution is very low (\mintinline{swift}{2300}), which only allows an \hyperref[sec:appendix-b-events]{event} to be logged.
+
+\subsection{Structs}
+\label{sec:appendix-b-structs}
+
+Structs in Flint are general-purpose constructs that group state and methods that can be used as self-contained blocks. They use the same syntax as defining constants and variables for properties. Structure methods are not protected as they can only be called by contract functions, and are required to be annotated \mintinline{swift}{mutating} if they mutate the struct's state.
+
+\subsubsection{Declaration}
+\label{sec:appendix-b-declaration}
+
+The syntax of a struct declaration is:
+
+\begin{minted}{swift}
+struct <name> {
+  // variables, constants, methods
+}
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+struct Rectangle {
+  var width: Int = 0
+  var height: Int = 0
+
+  func area() -> Int {
+    return width * height
+  }
+}
+\end{minted}
+
+\subsubsection{Instances}
+\label{sec:appendix-b-instances}
+
+The declaration of a struct only describes what types of variables it contains, what their initial values are, and what methods may be used to modify or access the struct data. To create concrete instances, each with individual data values, an instance has to be created, by calling the initialiser of a struct.
+
+\begin{minted}{swift}
+<struct-name>(<initialiser-parameter-values>)
+\end{minted}
+
+\begin{quote}
+\textbf{Bug}
+
+Unlike for \hyperref[sec:appendix-b-function-calls]{function calls}, it is not required to write the labels for struct initialiser parameters.
+\end{quote}
+
+Example:
+
+\begin{minted}{swift}
+let someRectangle: Rectangle = Rectangle()
+\end{minted}
+
+When an instance is created, it is initialised with its initial values – in this case a width and height of \mintinline{swift}{0}. This process can also be done manually using an \hyperref[sec:appendix-b-initialisers]{initialiser}. Defining initialisers is also required when default values are not specified for all properties of a struct. You can access the properties of the current struct with the special keyword \hyperref[sec:appendix-b-self]{\mintinline{swift}{self}}.
+
+Example:
+
+\begin{minted}{swift}
+struct Rectangle {
+  // Same definition as above with:
+  public init(width: Int, height: Int) {
+    self.width = width
+    self.height = height
+  }
+}
+\end{minted}
+
+\begin{minted}{swift}
+let bigRectangle = Rectangle(width: 400, height: 10000)
+\end{minted}
+
+\subsubsection{Accessing properties/methods}
+\label{sec:appendix-b-accessing-propertiesmethods}
+
+Properties/methods of a struct instance can be accessed by writing the property/method name immediately after the instance identifier, separated by a period \mintinline{swift}{.}:
+
+\begin{minted}{swift}
+<struct-instance>.<variable-name>
+<struct-instance>.<constant-name>
+<struct-instance>.<method-name>(<function-parameter-values>)
+\end{minted}
+
+Examples:
+
+\begin{minted}{swift}
+bigRectangle.width // 400
+bigRectangle.area() // evaluates to 4000000 by calling the `area` function
+\end{minted}
+
+\begin{quote}
+\textbf{Planned feature}
+
+In the future a \mintinline{swift}{static} keyword will be added to indicate struct functions which are callable without creating a specific instance. See https://github.com/flintlang/flint/issues/419
+\end{quote}
+
+\subsubsection{Structs as function arguments}
+\label{sec:appendix-b-structs-as-function-arguments}
+
+Structs can be passed by reference using the \mintinline{swift}{inout} type modifier. The struct is then treated as an implicit reference to the value in the caller. Any modifications made to the struct will still be visible after the function is called.
+
+When calling a function with an \mintinline{swift}{inout} parameter, the given struct instance must be prefixed with \mintinline{swift}{&} to indicate it is being passed by reference.
+
+Example:
+
+\begin{minted}{swift}
+struct S {
+  var x: Int
+
+  init(x: Int) {
+    self.x = x
+  }
+}
+
+func foo() {
+  let s: S = S(x: 8)
+
+  byReference(s: &s)
+
+  // Here s.x == 10
+
+  // This is not supported:
+  //byValue(s: s)
+
+  // Here s.x == 10 would still be true.
+}
+
+func byReference(s: inout S) {
+  s.x = 10
+}
+
+// This is currently not supported:
+//func byValue(s: S) {
+//  s.x = 12
+//}
+\end{minted}
+
+\begin{quote}
+\textbf{Planned feature}
+
+Passing structs by value (copying the struct into storage or memory) is a planned feature. See https://github.com/flintlang/flint/issues/133.
+\end{quote}
+
+\subsection{Contracts}
+\label{sec:appendix-b-contracts}
+
+Contracts lie at the heart of Flint. They are the core building blocks of a program's code. Constants and variables can be defined inside contracts to be stored in the Ethereum network.
+
+\subsubsection{Declaration}
+\label{sec:appendix-b-declaration-1}
+
+The declaration of a Flint contract consists of multiple parts. The properties are declared in a single block using the keyword \mintinline{swift}{contract} followed by the contract name that will be used as the identifier.
+
+\begin{minted}{swift}
+contract <name> {
+  // constant and variable declarations, event declarations
+}
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+contract Bank {
+  var owner: Address
+  let name: String = "Bank"
+  event Shutdown(reason: String)
+}
+\end{minted}
+
+\subsubsection{Type states}
+\label{sec:appendix-b-type-states}
+
+Flint introduces the concept of type states. Insufficient and incorrect state management in Solidity code have led to security vulnerabilities and unexpected behaviour in widely deployed smart contracts. Avoiding these vulnerabilities by the design of the language is a strong advantage.
+
+Type states of a contract represent the possible states it can be in. At any point of time, the contract on the network can only exist in a single state. Special \hyperref[sec:appendix-b-become-statements]{\mintinline{swift}{become} statements} can be used within functions to move the contract to a different type state.
+
+A contract declaration may optionally include a list of its type states:
+
+\begin{minted}{swift}
+contract <name> (<type-state-1>, <type-state-2>, ...) {
+  // constant and variable declarations, event declarations
+}
+\end{minted}
+
+Type states should be valid identifiers, starting with a capital letter.
+
+Example:
+
+\begin{minted}{swift}
+contract Auction (Preparing, InProgress, Terminated) {}
+\end{minted}
+
+Using \hyperref[sec:appendix-b-type-state-protection]{type state protection}, it is possible to specify that only certain functions will be callable when the contract is in a given type state.
+
+\subsubsection{Protection blocks}
+\label{sec:appendix-b-protection-blocks}
+
+The remaining parts of a contract are its protection blocks. While traditional computer programs have an entry point (the \mintinline{swift}{main} function), smart contracts do not. After a contract is deployed on the blockchain, its code does not run until an Ethereum transaction is received. Smart contracts are in fact more akin to RESTful web services presenting API endpoints. It is important to prevent unauthorised parties from calling sensitive functions.
+
+In Flint, functions of a contract are declared within protection blocks, which restrict when the enclosed functions are allowed to be called.
+
+There are two elements to protection blocks, the \hyperref[sec:appendix-b-caller-group]{caller group} and the optional \hyperref[sec:appendix-b-type-state-protection]{type state protection} (see \hyperref[sec:appendix-b-type-states]{type states} for more detail).
+
+A minimal protection block of contract \mintinline{swift}{<contract-name>} with the \hyperref[sec:appendix-b-caller-group]{caller group} \mintinline{swift}{<caller-group>} is declared as:
+
+\begin{minted}{swift}
+<contract-name> :: (<caller-group>) {
+  // functions
+}
+\end{minted}
+
+The caller can optionally be captured into a variable (see \hyperref[sec:appendix-b-caller-group-variable]{caller group variable}):
+
+\begin{minted}{swift}
+<contract-name> :: <variable> <- (<caller-group>) {
+  // functions
+}
+\end{minted}
+
+The protection block can optionally also check that the contract is in a given \hyperref[sec:appendix-b-type-states]{type state} (see \hyperref[sec:appendix-b-type-state-protection]{type state protection}):
+
+\begin{minted}{swift}
+<contract-name> @(<type-state>) :: (<caller-group>) {
+  // functions
+}
+\end{minted}
+
+Alternatively, protection blocks can be declared within the contract declaration part with the same syntax but using \mintinline{swift}{self} instead of the contract name:
+
+\begin{minted}{swift}
+contract <contract-name> {
+  // ...
+  self :: (<caller-group>) {
+    // ...
+  }
+}
+\end{minted}
+
+Solidity uses function modifiers to insert dynamic checks in functions, which can for instance abort unauthorised calls. However, it is easy to forget to specify these checks, as the language does not require programmers to write them.
+
+Having a language construct which protects functions from invalid calls could require programmers to systematically think about which parties should be able to call the functions they are about to define.
+
+In Flint, functions of a contract are declared within protection blocks, which protect the functions from invalid access.
+
+\textbf{Caller group}
+\label{sec:appendix-b-caller-group}
+
+Caller groups consist of a list of caller members enclosed in parentheses. These caller members may be identified using multiple mechanisms, as listed below. Functions inside protection blocks can only be called by an Ethereum address (the `caller' address) that satisfies at least one of the caller members of that protection block.
+
+\begin{tabularx}{\textwidth}{llX}
+	Name & Flint type & Callable when\\\hline
+	Predicate function & \texttt{Address -> Bool} & The function is called with the caller as input, must return \texttt{true}.\\
+	0-ary function & \texttt{() -> Address} & The returned address must match the caller address.\\
+	State property (single address) & \texttt{Address} & The address property must match the caller address.\\
+	State property (list of addresses) & \texttt{[Address]} or \texttt{Address[n]} & The caller address must be contained within the list of addresses.\\
+	State property (dictionary of addresses) & \texttt{[T: Address]} & The caller address must be contained with in the values of the dictionary.\\
+	Any & \texttt{any} & Always.
+\end{tabularx}
+
+Examples:
+
+\begin{minted}{swift}
+contract Bank {
+  let owner: Address
+  var managers: [Address]
+}
+
+Bank :: (owner, managers) {
+  // ...
+}
+
+contract Lottery {}
+
+Lottery :: (lucky) {
+  func lucky(address: Address) -> Bool {
+    // return true or false
+  }
+}
+\end{minted}
+
+The Ethereum address of the caller of a function is unforgeable. It is not possible to impersonate another user, as a consequence of Ethereum’s mechanism which generates public addresses from private keys. Transactions are signed using a private key, and determine the public key of the caller. Stealing a caller capability would hence require stealing a private key. The recommended way for Ethereum users to transfer their ability to call functions is to either change the backing address of the caller capability they have (the smart contract must have a function which allows this), or to securely send their private key to the new owner, outside of the Ethereum platform.
+
+Calls to Flint functions are validated both at compile-time and runtime, with runtime checks only being added where necessary.
+
+\textbf{Caller group variable}
+\label{sec:appendix-b-caller-group-variable}
+
+It is sometimes useful to know which address initiated the current transaction, in addition to verifying it with caller groups. This is possible with the optional caller group variable.
+
+\begin{minted}{swift}
+<contract-name> :: <variable> <- (<caller-group>) {
+  // functions
+}
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+contract AddressBook {
+  var book: [Address: String] = [:]
+}
+
+AddressBook :: address <- (any) {
+  public func remember(name: String) {
+    book[address] = name
+  }
+}
+\end{minted}
+
+\textbf{Type state protection}
+\label{sec:appendix-b-type-state-protection}
+
+A protection block may also be used to ensure that certain functions are only called when the contract is in a given type state.
+
+\begin{minted}{swift}
+<contract-name> @(<type-state>) :: (<caller-group>) {
+  // functions
+}
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+contract Poll(Open, CountingVotes, Result) {
+  // ...
+}
+
+Poll @(Open) :: (any) {
+  public func voteFor(option: String) {
+    // ...
+  }
+}
+\end{minted}
+
+In this example the \mintinline{swift}{voteFor} function could only be called when the \mintinline{swift}{Poll} was in the \mintinline{swift}{Open} state.
+
+\textbf{Static checking}
+\label{sec:appendix-b-static-checking}
+
+In a Flint function, if a function call to another Flint function is performed, the compiler checks that the caller meets the caller protection.
+
+Consider the following example:
+
+\begin{minted}{swift}
+Bank :: (any) {
+  func foo() {
+    // Error: Protection "any" cannot be used to perform a call to a
+    // function for "manager"
+    bar()
+  }
+}
+
+Bank :: (manager) {
+  func bar() {}
+}
+\end{minted}
+
+Within the context of \mintinline{swift}{foo}, the caller is regarded as \mintinline{swift}{any}. It is not certain that the caller also satisfies the \mintinline{swift}{manager} protection, so the compiler rejects the call.
+
+\textbf{Dynamic checking}
+\label{sec:appendix-b-dynamic-checking}
+
+In the above example, it is still possible for \mintinline{swift}{foo} to satisfy the protections of the function \mintinline{swift}{bar}. For such cases, two additional language constructs exist:
+
+\begin{itemize}
+	\item \mintinline{swift}{try? bar()}: The function \mintinline{swift}{bar} is called if, at runtime, the protections are satisfied (i.e. the caller satisfies the caller protection and the state of the contract satisfies the type state protection). The expression \mintinline{swift}{try? bar()} returns a boolean if successful.
+	\item \mintinline{swift}{try! bar()}: If at runtime \mintinline{swift}{bar} protections are not satisfied an exception is thrown (reverting the transaction) and the function is not executed.
+\end{itemize}
+
+\textbf{Multiple protections}
+\label{sec:appendix-b-multiple-protections}
+
+A contract behaviour declaration can be restricted by multiple caller protections. Consider the following contract behavior declaration:
+
+\begin{minted}{swift}
+Bank :: (manager, accounts) {
+  func forManagerOrCustomers() {}
+}
+\end{minted}
+
+The function \mintinline{swift}{forManagerOrCustomers} can be called either by the manager, or by any of the accounts registered in the bank.
+
+Calls to functions of multiple protections are accepted if \textbf{each} of the protections of the enclosing function are compatible with \textbf{any} of the target function's protections.
+
+Consider the following examples:
+
+\begin{minted}{swift}
+// Insufficient protections
+Bank :: (manager, accounts) {
+  func forManagerOrCustomers() {
+    // Error: "accounts" is not compatible with "manager"
+    forManager()
+  }
+}
+
+Bank :: (manager) {
+  func forManager() {}
+}
+\end{minted}
+
+\begin{minted}{swift}
+// Sufficient protections
+Bank :: (manager, accounts) {
+  func forManagerOrCustomers() {
+    // Valid: "manager" is compatible with "manager", and "accounts" is
+    // compatible with "accounts"
+    forManagerOrCustomers2()
+  }
+}
+
+Bank :: (accounts, manager) {
+  func forManagerOrCustomers2() {}
+}
+\end{minted}
+
+\begin{minted}{swift}
+// `any` is compatible with any caller protection
+Bank :: (manager, accounts) {
+  func forManagerOrCustomers() {
+    // Valid: "manager" is compatible with "manager" (and "any", too), and "accounts"
+    // is compatible with "any"
+    forManagerOrCustomers2()
+  }
+}
+
+// The caller protection "manager" has no effect: "any" is compatible with any caller protection
+Bank :: (manager, any) {
+  func forManagerOrCustomers2() {}
+}
+\end{minted}
+
+\subsubsection{Visibility modifiers}
+\label{sec:appendix-b-visibility-modifiers}
+
+Variables declared in the contract can have modifiers in front of their declaration which control the automatic synthesis of variable accessors and mutators. By the nature of smart contracts all storage is visible already, but providing accessors makes that process easier.
+
+\begin{itemize}
+	\item \mintinline{swift}{public} access synthesises an accessor and a mutator so that the storage variable can be viewed and changed by anyone.
+	\item \mintinline{swift}{visible} access synthesises an accessor to the storage variable which allows it to be viewed by anyone.
+	\item \mintinline{swift}{private} access means that nothing is synthesised (but both accessors and mutators can still be manually specified).
+\end{itemize}
+
+An accessor, if synthesised for variable \mintinline{swift}{<name>} or type \mintinline{swift}{<type>}, has the signature \mintinline{swift}{public func get<Name>() -> <type>}. A mutator, if synthesised for the same variable, has the signature \mintinline{swift}{public mutatic func set<Name>(to: <type>)}.
+
+Example:
+
+\begin{minted}{swift}
+public var value: Int
+visible var name: String = "Bank"
+\end{minted}
+
+The above declarations cause these functions to be synthesised:
+
+\begin{minted}{swift}
+public func getValue() -> Int
+public func setValue(to: Int)
+public func getName() -> String
+\end{minted}
+
+\subsubsection{Events}
+\label{sec:appendix-b-events}
+
+JavaScript applications can listen to events emitted by an Ethereum smart contract.
+
+In Flint, events are declared in contract declarations. They use a similar syntax to functions, except using the keyword \mintinline{swift}{event}.
+
+\begin{minted}{swift}
+event <event-name>(<event-parameter-1>, <event-parameter-2>, ...)
+\end{minted}
+
+Like functions, some of the parameters can have default values, but these must be declared at the end of the parameter list.
+
+Events can then be emitted using the keyword \mintinline{swift}{emit} followed by an event call. An event call is similar to a function call (parameters must be provided in order, and they must have the correct label and type; if any optional parameters are omitted, their default value will be used automatically).
+
+\begin{minted}{swift}
+contract Bank {
+  var balances: [Address: Int]
+  event CompletedTransfer(origin: Address, destination: Address, amount: Int)
+}
+
+Bank :: caller <- (any) {
+  mutating func transfer(to: Address, value: Int) {
+    // Note the following 2 lines are unsafe!
+    balances[caller] -= value
+    balances[to] += value
+
+    // A JavaScript client could listen for this event:
+    emit CompletedTransfer(origin: caller, destination: to, amount: value)
+  }
+}
+\end{minted}
+
+\subsection{Traits}
+\label{sec:appendix-b-traits}
+
+Flint has the concept of 'traits', based in part on \href{https://doc.rust-lang.org/rust-by-example/trait.html}{traits in the Rust language}. Traits describe the partial behaviour of the contracts or structs which conform to them. For contracts, traits constitute a collection of functions, function signatures in protection blocks, and events. For structs, traits only constitute a collection of functions and function signatures.
+
+Contracts or structs can conform to multiple traits. The Flint compiler enforces the implementation of function signatures in the trait and allows usage of the functions declared in them. Traits allow a level of abstraction and code reuse for contracts and structs.
+
+\begin{quote}
+\textbf{Planned feature}
+
+In the future, the Flint standard library will include traits providing common functionality to contracts (\mintinline{swift}{Ownable}, \mintinline{swift}{Burnable}, \mintinline{swift}{MultiSig}, \mintinline{swift}{Pausable}, \mintinline{swift}{ERC20}, \mintinline{swift}{ERC721}, etc.) and structs (\mintinline{swift}{Transferable}, \mintinline{swift}{RawValued}, \mintinline{swift}{Describable} etc.). It will also form the basis for allowing end users to access compiler level guarantees and restrictions as in \hyperref[sec:appendix-b-assets]{assets} and Numerics.
+\end{quote}
+
+\subsubsection{Struct traits}
+\label{sec:appendix-b-struct-traits}
+
+Traits can be declared for structs using the syntax:
+
+\begin{minted}{swift}
+struct trait <trait-name> {
+  // trait members
+}
+\end{minted}
+
+Structs can conform to struct traits using the syntax:
+
+\begin{minted}{swift}
+struct <struct-name>: <trait-1>, <trait-2>, ... {
+  // ...
+}
+\end{minted}
+
+Struct traits can contain functions, function signatures, initialisers, and initialiser signatures. A function or initialiser signature simply declares the name (for a function) and parameter types, without providing the actual code implementation.
+
+Example:
+
+In this example we define an \mintinline{swift}{Animal} struct trait. The \mintinline{swift}{Person} struct then conforms to the \mintinline{swift}{Animal} trait.
+
+\begin{minted}{swift}
+struct trait Animal {
+  // Must have an empty and named initialiser.
+  public init()
+  public init(name: String)
+
+  // These are signatures that conforming structures must implement
+  // access properties of the structure.
+  func isNamed() -> Bool
+  public func name() -> String
+  public func noise() -> String
+
+  // This is a pre-implemented function using the functions already in the trait.
+  public func speak() -> String {
+    if isNamed() {
+      return name()
+    }
+    else {
+      return noise()
+    }
+  }
+}
+
+struct Person: Animal {
+  let name: String
+
+  public init() {
+    self.name = "John Doe"
+  }
+  public init(name: String) {
+    self.name = name
+  }
+
+  // People always have a name, it's just not always known.
+  func isNamed() -> Bool {
+    return true
+  }
+
+  // These access the properties of the struct.
+  public func name() -> String {
+    return self.name
+  }
+
+  public func noise() -> String {
+    return "Huh?"
+  }
+
+  // Person can also have functions in addition to Animal.
+  public func greet() -> String {
+    return "Hi"
+  }
+}
+\end{minted}
+
+\subsubsection{Contract traits}
+\label{sec:appendix-b-contract-traits}
+
+Traits can be declared for contracts using the syntax:
+
+\begin{minted}{swift}
+contract trait <trait-name> {
+  // trait members
+}
+\end{minted}
+
+Contracts can conform to contract traits using the following syntax for their declaration part:
+
+\begin{minted}{swift}
+contract <contract-name>: <trait-1>, <trait-2>, ... {
+  // ...
+}
+\end{minted}
+
+Contract traits can contain anonymous contract behaviour declarations containing functions, function signatures, and events.
+
+Example:
+
+In this example, we define \mintinline{swift}{Ownable}, which declares a contract as something that can be owned and transferred. The \mintinline{swift}{Ownable} trait is then used by the \mintinline{swift}{ToyWallet} contract allowing the use of methods in \mintinline{swift}{Ownable}. This demonstrates how we can expose contract properties:
+
+\begin{minted}{swift}
+contract trait Ownable {
+  event OwnershipRenounced(previousOwner: Address)
+  event OwnershipTransfered(previousOwner: Address, newOwner: Address)
+
+  self :: (any) {
+    public func getOwner() -> Address
+  }
+
+  self :: (getOwner) {
+    func setOwner(newOwner: Address)
+
+    public func renounceOwnership() {
+      emit OwnershipRenounced(getOwner())
+      setOwner(0x000...)
+    }
+
+    public func transferOwnership(newOwner: Address) {
+      assert(newOwner != 0x000...)
+      emit OwnershipTransfered(getOwner(), newOwner)
+      setOwner(newOwner)
+    }
+  }
+}
+
+contract ToyWallet: Ownable {
+  visible var owner: Address // visible automatically creates getOwner
+  // Skipping initialiser not relevant for this example
+}
+
+ToyWallet :: (getOwner) {
+  func setOwner(newOwner: Address){
+    self.owner = newOwner
+  }
+}
+\end{minted}
+
+\subsubsection{External traits}
+\label{sec:appendix-b-external-traits}
+
+Traits can be declared for external contracts using the syntax:
+
+\begin{minted}{swift}
+contract trait <trait-name> {
+  // trait members
+}
+\end{minted}
+
+See the \hyperref[sec:appendix-b-specifying-the-interface]{specifying the interface of external calls} section for more information.
+
+\subsubsection{Polymorphic self}
+\label{sec:appendix-b-polymorphic-self}
+
+\mintinline{swift}{Self} (note the capital 'S') is a special type available only in struct and contract traits. It refers to the type that implements the current trait, but not any other type that conforms to that trait. This is particularly useful when providing default implementations for functions in a trait. See \hyperref[sec:appendix-b-assets]{assets} for an example in the standard library.
+
+Example without \mintinline{swift}{Self}:
+
+\begin{minted}{swift}
+struct trait Unit {
+  func add(source: inout Unit)
+}
+
+struct Metre: Unit {
+  var length: Int = 0
+  func add(source: inout Unit) {
+    length += source.length // compilation error here
+  }
+}
+\end{minted}
+
+In the above example, we only want to be able to add metres to metres. Accessing \mintinline{swift}{source.length} is invalid, because \mintinline{swift}{length} is only declared in \mintinline{swift}{Metre}. Instead, using \mintinline{swift}{Self}:
+
+\begin{minted}{swift}
+struct trait Unit {
+  mutating func add(source: inout Self)
+}
+
+struct Metre: Unit {
+  var length: Int = 0
+  mutating func add(source: inout Metre) {
+    length += source.length
+  }
+}
+
+struct Litre: Unit {
+  var volume: Int = 0
+  mutating func add(source: inout Litre) {
+    volume += source.volume
+  }
+}
+\end{minted}
+
+In this example, both \mintinline{swift}{Metre} and \mintinline{swift}{Litre} are valid. But a call like:
+
+\mintinline{swift}{aMetreInstance.add(source: &aLitreInstance)}
+
+would cause a compile-time error.
+
+
+\subsection{Expressions}
+\label{sec:appendix-b-expressions}
+
+Expressions are at the core of any computation done in Flint code. Evaluating an expression results in a single value of a given type. Expressions can be nested to arbitrary layers.
+
+The expressions available in Flint are:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{llX}
+	Name & Syntax & Description\\\hline
+	Literal & \texttt{1}, \texttt{"hello"}, \texttt{false}, etc. & Constant value; see \hyperref[sec:appendix-b-literals]{literals}.\\
+	Range & \texttt{<expr-1>..<<expr-2>}, \texttt{<expr-1>...<expr-2>} & See \hyperref[sec:appendix-b-range-types]{ranges}.\\
+	Binary expression & \texttt{<expr-1> <op> <expr-2>} & A binary operation \texttt{<op>} applied to the expressions \texttt{<expr-1>} and \texttt{<expr-2>}; see \hyperref[sec:appendix-b-operators]{operators}.\\
+	Struct reference & \texttt{\&<expr>} & See \hyperref[sec:appendix-b-structs-as-function-arguments]{structs as function arguments}.\\
+	Function call & \texttt{<function-name>(<param-1>: <expr-1>, <param-2>: <expr-2>, ...)} & Call to the function \texttt{<function-name>} with the results of the given expressions \texttt{<expr-1,2,...>} as parameters. See \hyperref[sec:appendix-b-function-calls]{function calls}.\\
+	Dot access & \texttt{<expr-1>.<field>} & Access to the \texttt{<field>} field (variable, constant, function) or the result of \texttt{<expr-1>}.\\
+	Index / key access & \texttt{<expr-1>[<expr-2>]} & Access to the given key of a list or dictionary.\\
+	External call & \texttt{call <external-contract>.<function-name>(<param-1>: <expr-1>, <param-2>: <expr-2>, ...)} & Call to the function of an external contract; see \hyperref[sec:appendix-b-external-calls]{external calls}.\\
+	Type cast & \texttt{<expr> as! <type>} & Forced cast of the result of \texttt{<expr>} to \texttt{<type>}; see \hyperref[sec:appendix-b-casting-to-and-from-solidity-types]{casting to and from Solidity types}.\\
+	Attempt & \texttt{try? <call>}, \texttt{try! <call>} & Attempt to call a function in a different protection block, see \hyperref[sec:appendix-b-dynamic-checking]{dynamic checking}.
+\end{tabularx}
+\end{center}
+
+\subsubsection{Function calls}
+\label{sec:appendix-b-function-calls}
+
+Functions can then be called from within a contract protection block with the same identifier. The call arguments must be provided in the same order as the one they are declared in (in the function signature), and they must be labeled accordingly (the exception for this is \hyperref[sec:appendix-b-instances]{struct initialisers}). If any of the optional parameters are not provided, then their default values are going to be used automatically.
+
+\subsection{Literals}
+\label{sec:appendix-b-literals}
+
+Literals represent fixed values in the source code that can be assigned to constants and variables.
+
+\subsubsection{Integer literals}
+\label{sec:appendix-b-integer-literals}
+
+Integer literals (Flint type \mintinline{swift}{Int}) can be written as decimal numbers. The size of the \mintinline{swift}{Int} type in Flint is 256 bits (32 bytes), so the highest allowed integer is quite large (\mintinline{swift}{2^256 - 1}, more than 76 decimal degits). Underscores can be used to separate digits of integer literals.
+
+Examples:
+
+\begin{minted}{swift}
+42
+2019
+1_22_333
+1_000_000_000_000_000_000_000_000
+\end{minted}
+
+\subsubsection{Address literals}
+\label{sec:appendix-b-address-literals}
+
+Address literals (Flint type \mintinline{swift}{Address}) are written as 40 hexadecimal digits prefixed by a \mintinline{swift}{0x}. Addresses are an important concept in Ethereum, referring to other contracts and accounts. Underscores can be used to separate digits of address literals.
+
+Examples:
+
+\begin{minted}{swift}
+0x1234123412341234123412341234123412341234
+0x0CB1DB10A4820BD10823AE0101F02198CAFEBABE
+0xCAFEBABE_CAFEBABE_CAFEBABE_CAFEBABE_CAFEBABE
+\end{minted}
+
+\subsubsection{Boolean literals}
+\label{sec:appendix-b-boolean-literals}
+
+Boolean literals (Flint type \mintinline{swift}{Bool}) are simply \mintinline{swift}{true} and \mintinline{swift}{false}.
+
+\subsubsection{String literals}
+\label{sec:appendix-b-string-literals}
+
+String literals (Flint type \mintinline{swift}{String}) are sets of characters enclosed in double quotes \mintinline{swift}{"..."}.
+
+Examples:
+
+\begin{minted}{swift}
+""
+"hello"
+"This is a sentence."
+\end{minted}
+
+\begin{quote}
+\textbf{Bug}
+
+Due to the fact that \mintinline{swift}{Strings} are currently stored in a single EVM memory slot, they cannot be longer than 32 bytes. See https://github.com/flintrocks/flint/issues/133.
+\end{quote}
+
+\subsubsection{List literals}
+\label{sec:appendix-b-list-literals}
+
+List literals (Flint type \mintinline{swift}{[T]} or \mintinline{swift}{T[n]} for some Flint type \mintinline{swift}{T}) currently only include the empty list \mintinline{swift}{[]}.
+
+\begin{quote}
+\textbf{Planned feature}
+
+In the future, Flint will have non-empty list literals written as \mintinline{swift}{[x, y, z, ...]} where \mintinline{swift}{x}, \mintinline{swift}{y}, \mintinline{swift}{z}, etc. are literals of type \mintinline{swift}{T}. See https://github.com/flintlang/flint/issues/420.
+\end{quote}
+
+\subsubsection{Dictionary literals}
+\label{sec:appendix-b-dictionary-literals}
+
+Dictionary literals (Flint type \mintinline{swift}{[T: U]} for some Flint types \mintinline{swift}{T} and \mintinline{swift}{U}) currently only include the empty dictionary \mintinline{swift}{[:]}.
+
+\begin{quote}
+\textbf{Planned feature}
+
+In the future, Flint will have non-empty dictionary literals written as \mintinline{swift}{[x: a, y: b, z: c, ...]} where \mintinline{swift}{x}, \mintinline{swift}{y}, \mintinline{swift}{z}, etc. are literals of type \mintinline{swift}{T} and \mintinline{swift}{a}, \mintinline{swift}{b}, \mintinline{swift}{c}, etc. are literals of type \mintinline{swift}{U}. See https://github.com/flintlang/flint/issues/420.
+\end{quote}
+
+\subsubsection{Self}
+\label{sec:appendix-b-self}
+
+The special keyword \mintinline{swift}{self} refers to the current struct instance or contract containing the current function.
+
+\subsection{Operators}
+\label{sec:appendix-b-operators}
+
+An operator is a special symbol used to check, change, or combine values. Flint supports common Swift operators and attempts to eliminate common coding errors.
+
+\subsubsection{Arithmetic operators}
+\label{sec:appendix-b-arithmetic-operators}
+
+Flint supports the following arithmetic operators for \mintinline{swift}{Int} expressions:
+
+\begin{itemize}
+	\item \mintinline{swift}{+} - Addition
+	\item \mintinline{swift}{-} - Subtraction
+	\item \mintinline{swift}{*} - Multiplication
+	\item \mintinline{swift}{/} - Division
+	\item \mintinline{swift}{**} - Exponentiation
+\end{itemize}
+
+Examples:
+
+\begin{minted}{swift}
+1 + 2 // equals 3
+5 - 3 // equals 2
+2 * 3 // equals 6
+10 / 2 // equals 5
+2 ** 3 // equals 8
+\end{minted}
+
+Flint has unique safe arithmetic. The \mintinline{swift}{+}, \mintinline{swift}{-}, \mintinline{swift}{*} and \mintinline{swift}{**} operators throw an exception and abort execution of the smart contract when an overflow occurs. The \mintinline{swift}{/} operator implements integer division. No underflows can occur as floating-point numbers are not supported yet. The performance overhead of the safe operators is low.
+
+In rare cases, allowing overflows is the intended behaviour. Flint also supports
+overflowing operators, which will not crash on overflow:
+
+\begin{itemize}
+	\item \mintinline{swift}{&+} - Unsafe addition
+	\item \mintinline{swift}{&-} - Unsafe subtraction
+	\item \mintinline{swift}{&*} - Unsafe multiplication
+\end{itemize}
+
+\subsubsection{Boolean operators}
+\label{sec:appendix-b-boolean-operators}
+
+These operators all result in \mintinline{swift}{Bool}:
+
+\begin{itemize}
+	\item \mintinline{swift}{==} - Equal to
+	\item \mintinline{swift}{!=} - Not equal to
+	\item \mintinline{swift}{||} - Logical or
+	\item \mintinline{swift}{&&} - Logical and
+	\item \mintinline{swift}{<} - Less than
+	\item \mintinline{swift}{<=} - Less than or equal to
+	\item \mintinline{swift}{>} - Greater than
+	\item \mintinline{swift}{>=} - Greater than or equal to
+\end{itemize}
+
+Examples:
+
+\begin{minted}{swift}
+1 == 1 // true because 1 is equal to 1
+2 != 1 // true because 2 is not equal to 1
+2 > 1 // true because 2 is greater than 1
+1 < 2 // true because 1 is less than 2
+1 >= 1 // true because 1 is greater than or equal to 1
+2 <= 1 // false because 2 is not less than or equal to 1
+true || false // true because one of true and false is true
+true && false // false because one of true and false is false
+\end{minted}
+
+\subsection{Statements}
+\label{sec:appendix-b-statements}
+
+Statements control the execution of code in a function, enable looping, conditional behaviour, and more.
+
+\subsubsection{Variable/constant declaration and assignment}
+\label{sec:appendix-b-variableconstant-declaration-and-assignment}
+
+Declaration of variables and constants is a statement (see \hyperref[sec:appendix-b-constants-and-variables]{variables and constants}). Syntax:
+
+\begin{minted}{swift}
+let <name>: <type> = <expression>
+let <name>: <type>
+var <name>: <type> = <expression>
+var <name>: <type>
+\end{minted}
+
+\textbf{Compound assignment}
+\label{sec:appendix-b-compound-assignment}
+
+Flint also provides compound assignment statements that combine assignment (\mintinline{swift}{=}) with another operator. Namely:
+
+\begin{itemize}
+	\item \mintinline{swift}{+=} Compound addition
+	\item \mintinline{swift}{-=} Compound subtraction
+	\item \mintinline{swift}{*=} Compound times
+	\item \mintinline{swift}{/=} Compound division
+\end{itemize}
+
+Example:
+
+\begin{minted}{swift}
+x += 5
+// is equivalent to:
+x = x + 5
+\end{minted}
+
+\subsubsection{Loops}
+\label{sec:appendix-b-loops}
+
+\mintinline{swift}{for-in} loops can be used to iterate over sequence. Currently this supports lists, dictionary values and \hyperref[sec:appendix-b-range-types]{ranges}. Syntax:
+
+\begin{minted}{swift}
+for let <variable-name>: <type> in <sequence> {
+  // ...
+}
+\end{minted}
+
+Alternatively, the iteration value can be a variable, so it can be modified, though modifications are reset on each loop:
+
+\begin{minted}{swift}
+for var <variable-name>: <type> in <sequence> {
+  // ...
+}
+\end{minted}
+
+Example:
+
+Assuming a variable-length list \mintinline{swift}{names} (of type \mintinline{swift}{[String]}), it can be iterated over, binding the current iteration value to the constant \mintinline{swift}{name} of type \mintinline{swift}{String}, using:
+
+\begin{minted}{swift}
+for let name: String in names {
+  // do something with `name`
+}
+\end{minted}
+
+\subsubsection{Conditionals}
+\label{sec:appendix-b-conditionals}
+
+The \mintinline{swift}{if} statement allows executing different code based on the result of a condition (of Flint type \mintinline{swift}{Bool}). Syntax:
+
+\begin{minted}{swift}
+if <condition> {
+  // ...
+}
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+if x == 2 {
+  // ...
+}
+\end{minted}
+
+\textbf{Else clauses}
+\label{sec:appendix-b-else-clauses}
+
+The \mintinline{swift}{if} statement can also provide an alternative set of statements known as an \mintinline{swift}{else} clause which gets executed when the condition evaluates to \mintinline{swift}{false}. Syntax:
+
+\begin{minted}{swift}
+if <condition> {
+  // ...
+} else {
+  // ...
+}
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+if x == 2 {
+  // ...
+} else {
+  // ,,,
+}
+\end{minted}
+
+\subsubsection{Become statements}
+\label{sec:appendix-b-become-statements}
+
+(Contract-specific.)
+
+The \mintinline{swift}{become} statement can be used to change the type state (see \hyperref[sec:appendix-b-type-states]{type states}) of the current contract. The execution of code is terminated after a \mintinline{swift}{become} statement is executed, and the contract will then transition to the specified type state. Syntax:
+
+\begin{minted}{swift}
+become <type-state>
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+contract Semaphore(Red, Green) {}
+
+Semaphore @(Red) :: (any) {
+  public func wait() {
+    become Green
+  }
+}
+
+Semaphore @(Green) :: (any) {
+  public func wait() {
+    become Red
+  }
+}
+\end{minted}
+
+\subsubsection{Return statements}
+\label{sec:appendix-b-return-statements}
+
+A \mintinline{swift}{return} statement can be used to provide the output value of a function with a declared return type (see \hyperref[sec:appendix-b-functions]{functions}). Syntax:
+
+\begin{minted}{swift}
+return <expression>
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+Semaphore @(Red) :: (any) {
+  public func countWaitingCars() -> Int {
+    return 200
+  }
+}
+\end{minted}
+
+\subsubsection{Do-catch blocks}
+\label{sec:appendix-b-do-catch-blocks}
+
+\mintinline{swift}{do-catch} blocks can be used to handle errors in execution in a controlled manner. Currently, the only supported error is an external call error (see \hyperref[sec:appendix-b-external-calls]{external calls}). Syntax:
+
+\begin{minted}{swift}
+do {
+  // ...
+} catch is ExternalCallError {
+  // ...
+}
+\end{minted}
+
+\subsection{External calls}
+\label{sec:appendix-b-external-calls}
+
+External calls refer to a Flint contract calling the functions of other contracts deployed on the Ethereum network. They also allow money to be transferred from Flint contracts to other accounts and contracts, enabling full participation in the Ethereum network.
+
+However, external contracts include their own set of possible risks and security considerations. When writing code that interacts with external contracts, it is important to keep in mind that:
+
+\begin{enumerate}
+	\item External contracts may execute arbitrary code when called – although the called contract does not have access to the memory or state storage of the calling (Flint) contract, it may still cause problems. In particular, care should be taken when handling the output returned from an external contract. Additionally, the external contract may call arbitrary function of the calling (Flint) contract, potentially resulting in a re-entrancy attack.
+	\item Interfaces of external contracts may be incorrectly specified – since the EVM does not retain any type information, it is up to the programmer to correctly specify the functions available on an external contract. If the interface is specified incorrectly, this may lead to the wrong function being called and money being lost.
+\end{enumerate}
+
+\begin{quote}
+\textbf{Planned feature}
+
+In the future, external calls will include automatic re-entrancy attack protection, where no function of a Flint contract will be callable during the execution of an external call. See https://github.com/flintrocks/flint/issues/74.
+\end{quote}
+
+\subsubsection{Specifying the interface}
+\label{sec:appendix-b-specifying-the-interface}
+
+The interface of an external contract is specified using a special \mintinline{swift}{external} trait. Syntax:
+
+\begin{minted}{swift}
+external trait <trait-name> {
+  // functions
+}
+\end{minted}
+
+The functions declared inside an external trait may not include any modifiers, and their parameters and return types (if used) must be specified using \hyperref[sec:appendix-b-solidity-types]{Solidity types}.
+
+Currently, deploying contracts from within Flint code is not supported, so neither initialisers nor fallbacks can be provided in external traits.
+
+Example:
+
+\begin{minted}{swift}
+external trait ExternalBank {
+  @payable
+  func pay() -> int256
+  func withdraw(amount: int256) -> int256
+}
+\end{minted}
+
+\subsubsection{Creating an instance}
+\label{sec:appendix-b-creating-an-instance}
+
+To work with an external contract in a type-safe manner, every external trait automatically creates an implicit constructor, which takes a single \mintinline{swift}{address} parameter.
+
+\begin{minted}{swift}
+<external-trait-name>(address: <address>)
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+external trait Ext {}
+contract X {}
+
+X :: (any) {
+  public func callback(externalAddress: Address) {
+    let extInstance = Ext(address: externalAddress)
+  }
+}
+\end{minted}
+
+\subsubsection{Calling functions}
+\label{sec:appendix-b-calling-functions}
+
+Functions of an external contract instance may be called using the keyword \mintinline{swift}{call}. Flint provides two modes of operation for external calls, and they are semantically similar to \mintinline{swift}{try} in Swift.
+
+\begin{minted}{swift}
+call <contract>.<function-name>(<parameters>)
+call! <contract>.<function-name>(<parameters>)
+\end{minted}
+
+The forced mode is invoked with the syntax \mintinline{swift}{call!} (note the exclamation mark). If the external call fails for any reason (e.g. the external contract runs out of gas), the entire transaction will revert.
+
+\begin{minted}{swift}
+X :: (any) {
+  public func callback(externalAddress: Address) {
+    let extInstance = Ext(address: externalAddress)
+    call! extInstance.someFunction()
+  }
+}
+\end{minted}
+
+The default (safe) mode is invoked with the syntax \mintinline{swift}{call} (without the exclamation mark). Any default call must be inside a \mintinline{swift}{do-catch} block, and a failure in the external call will cause the code in the \mintinline{swift}{catch} block to be executed.
+
+\begin{minted}{swift}
+X :: (any) {
+  public func callback(externalAddress: Address) {
+    let extInstance = Ext(address: externalAddress)
+    do {
+      call extInstance.someFunction()
+    } catch is ExternalCallError {
+      // handle the error here
+    }
+  }
+}
+\end{minted}
+
+\begin{quote}
+\textbf{Planned feature}
+
+A third mode will be available in the future, \mintinline{swift}{call?}. It will return an \mintinline{swift}{Optional} type, like in Swift, intended to be used with the (also planned) \mintinline{swift}{if let ...} construct. See https://github.com/flintrocks/flint/issues/140.
+\end{quote}
+
+\subsubsection{Specifying hyper-parameters}
+\label{sec:appendix-b-specifying-hyper-parameters}
+
+In addition to function parameters, there are two more `hyper-parameters' that need to be set when performing an external call.
+
+The \mintinline{swift}{gas} hyper-parameter (defaults to \mintinline{swift}{2300}) with type \mintinline{swift}{Int} specifies how much Gas is allocated for the external call. Executing any code in EVM costs Gas and so the more Gas is provided, the more work can be done in a contract. The default amount, \mintinline{swift}{2300}, is enough to emit a single event (at the time of writing).
+
+The \mintinline{swift}{value} hyper-parameter (defaults to \mintinline{swift}{0}) with type \mintinline{swift}{Wei} specifies how much, if any, Wei is attached to the external call. Providing a non-zero amount causes money to be transferred from the calling (Flint) contract to the external contract. \mintinline{swift}{value} must be specified if and only if calling a function marked as \mintinline{swift}{@payable}.
+
+To specify \mintinline{swift}{gas} and/or \mintinline{swift}{value} for an external call, the syntax is:
+
+\begin{minted}{swift}
+call(<hyper-parameters>) <contract>.<function-name>(<parameters>)
+call(<hyper-parameters>)! <contract>.<function-name>(<parameters>)
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+X :: (any) {
+  public func callback(externalAddress: Address) {
+    let extInstance = Ext(address: externalAddress)
+    call(gas: 10000)! extInstance.someLongFunction()
+    call(value: Wei(unsafeRawValue: 100))! extInstance.someExpensiveFunction()
+    call(gas: 10000, value: Wei(unsafeRawValue: 100))! extInstance.someLongExpensiveFunction()
+  }
+}
+\end{minted}
+
+\subsubsection{Casting to and from Solidity types}
+\label{sec:appendix-b-casting-to-and-from-solidity-types}
+
+Since the types of external contract function parameters and return values are specified using \hyperref[sec:appendix-b-solidity-types]{Solidity types}, values must be converted before they are used for an external call. This is facilitated using the type casting expression.
+
+Example:
+
+\begin{minted}{swift}
+X :: (any) {
+  public func callback(externalAddress: Address) {
+    let extInstance = Ext(address: externalAddress)
+    var flintInt: Int = 1
+    call! extInstance.someFunctionTakingAnInt(someParameter: flintInt as! int256)
+
+    flintInt = (call! extInstance.someReturningFunction()) as! Int
+  }
+}
+\end{minted}
+
+The forced cast (\mintinline{swift}{as!}) expression converts Flint types to Solidity types and vice versa, after performing some basic runtime checks to make sure that the original value fits into the target value, since Solidity supports integer types of smaller sizes than the Flint default of 256 bits. An error results in the transaction being reverted.
+
+\begin{quote}
+\textbf{Planned feature}
+
+In the future, casting failures will be possible to handle using \mintinline{swift}{do-catch} blocks or an optional cast mode \mintinline{swift}{as?}.
+\end{quote}
+
+\subsection{Enumerations}
+\label{sec:appendix-b-enumerations}
+
+An enumeration defines a common group of values with the same type and enables working with those values in a type-safe way within Flint code. The syntax is:
+
+\begin{minted}{swift}
+enum <name>: <associated-type> {
+  case <case-name>
+  // additional cases...
+}
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+enum CompassPoint: Int {
+  case north
+  case south
+  case east
+  case west
+}
+\end{minted}
+
+The values defined in an enumeration (such as \mintinline{swift}{north}, \mintinline{swift}{south}, \mintinline{swift}{east} and \mintinline{swift}{west}) are its enumeration cases. Each enumeration defines a new user-defined type. To access a given case, dot syntax is used:
+
+\begin{minted}{swift}
+<enum-name>.<case-name>
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+var direction: CompassPoint
+direction = CompassPoint.north
+\end{minted}
+
+\subsubsection{Associated values}
+\label{sec:appendix-b-associated-values}
+
+You can assign raw values to enumeration cases. The values need to match the type associated with the enumeration. Flint will also try to infer the raw value of cases by default based on the raw value of the last declared enumeration case.
+
+Example:
+
+\begin{minted}{swift}
+enum Numbers: Int {
+  case one = 1
+  case two = 2
+  case three // Numbers.three == 3
+  case four // Numbers.four == 4
+}
+\end{minted}
+
+\section{Standard library}
+\label{sec:appendix-b-standard-library}
+
+\subsection{Assets}
+\label{sec:appendix-b-assets}
+
+Numerous attacks targeting smart contracts, such as ones relating to re-entrancy calls (see TheDAO), allowed hackers to steal a contract’s Ether. Some of these happened because smart contracts encoded Ether values as integers, making it easy to make mistakes when performing Ether transfers between variables, or to forget to record Ether arriving or leaving the smart contract.
+
+Flint supports special safe operations when handling assets, such as Wei (the smallest unit of Ether). They help ensure the contract's state consistently represents its Wei value, preventing attacks such as TheDAO.
+
+A simple use of Wei:
+
+\begin{minted}{swift}
+contract Wallet {
+  var owner: Address
+  var contents: Wei = Wei(unsafeRawValue: 0)
+}
+
+Wallet :: caller <- (any) {
+  public init() {
+    owner = caller
+  }
+
+  @payable
+  public mutating func deposit(implicit value: Wei) {
+    // Record the Wei received into the contents state property.
+    // Value is passed by reference.
+    contents.transfer(source: &value)
+  }
+}
+
+Wallet :: (owner) {
+  public mutating func withdraw(value: Int) {
+    // Transfer an amount of Wei into a local variable. This
+    // removes Wei from the contents state property.
+    var w: Wei = Wei(source: &contents, amount: value)
+
+    // Send Wei to the owner's Ethereum address.
+    send(address: owner, value: &w)
+  }
+
+  public func getContents() -> Int {
+    return contents.getRawValue()
+  }
+}
+\end{minted}
+
+Another example which uses Wei is the Bank example.
+
+\begin{minted}{swift}
+contract Wallet {
+  var beneficiaries: [Address: Wei]
+  var weights: [Address: Int]
+  var bonus: Wei
+  var owner: Address
+}
+
+Wallet :: (any) {
+  @payable
+  mutating func receiveBonus(implicit newBonus: inout Wei) {
+    bonus.transfer(source: &newBonus)
+  }
+}
+
+Wallet :: (owner) {
+  mutating func distribute(amount: Int) {
+    let beneficiaryBonus = bonus.getRawValue() / beneficiaries.count
+    for let person: Address in beneficiaries {
+      var allocation = Wei(source: &balance, amount: amount * weights[person])
+      allocation.transfer(source: &bonus, amount: beneficiaryBonus)
+      send(address: beneficiaries[i], value: &allocation)
+    }
+  }
+}
+\end{minted}
+
+Wei is an example of an asset, and it is a struct conforming to the \mintinline{swift}{struct trait Asset}, available in the standard library. It is possible to declare custom structs which will behave like assets:
+
+\begin{minted}{swift}
+struct MyWei : Asset {
+  var rawValue: Int = 0
+
+  init(unsafeRawValue: Int) {
+    self.rawValue = unsafeRawValue
+  }
+
+  init(source: inout MyWei, amount: Int) {
+    transfer(source: &source, amount: amount)
+  }
+
+  init(source: inout MyWei) {
+    let amount: Int = source.getRawValue()
+    transfer(source: &source, amount: amount)
+  }
+
+  mutating func setRawValue(value: Int) -> Int {
+    rawValue = value
+    return rawValue
+  }
+
+  func getRawValue() -> Int {
+    return rawValue
+  }
+}
+\end{minted}
+
+The \mintinline{swift}{transfer} functions are declared in the \mintinline{swift}{Asset} trait and are inherited automatically. For the time being, traits do not support default implementations for initialisers or variables, so custom assets have to include the code above. Struct traits also do not support variables as part of the conformance, which is why \mintinline{swift}{setRawValue} and \mintinline{swift}{getRawValue} are required.
+
+\subsection{Global functions}
+\label{sec:appendix-b-global-functions}
+
+Global functions in the standard library are special function which can be called from any contract, struct, or contract group.
+
+\subsubsection{Assertions}
+\label{sec:appendix-b-assertions}
+
+Assertions are checks that happen at runtime. They are used to ensure an essential condition is satisfied before executing any further code. If the boolean condition evaluates to \mintinline{swift}{true} then the execution continues as usual. Otherwise the transaction is reverted.
+
+\begin{minted}{swift}
+assert(<expr>)
+\end{minted}
+
+Example:
+
+\begin{minted}{swift}
+assert(x == 2)
+\end{minted}
+
+In essence an assertion is a shorthand for the longer:
+
+\begin{minted}{swift}
+if x == 2 {
+  fatalError()
+}
+\end{minted}
+
+\subsubsection{Fatal error}
+\label{sec:appendix-b-fatal-error}
+
+\mintinline{swift}{fatalError()} is a function exposed that reverts a transaction when called. This means that any contract storage changes are rolledback and no values are returned.
+
+\subsubsection{Send}
+\label{sec:appendix-b-send}
+
+\mintinline{swift}{send(address: Address, value: inout Wei)} sends the \mintinline{swift}{value} Wei to the Ethereum address \mintinline{swift}{address}, and clears the contents of \mintinline{swift}{value}. It is a simpler way to perform a money transfer compared to \hyperref[sec:appendix-b-external-calls]{external calls}, but does not allow hyper-parameters to be specified.
