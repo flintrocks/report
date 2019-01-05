@@ -11,13 +11,15 @@ Apart from improving the language, we have also focused on providing integration
 
 \subsection{Language Server Protocol}
 
-\begin{figure}[H]
+LSP is a protocol which allows a single server implementation for auto-completion, go-to-definition, and diagnostics to be used for multiple editor clients (see figure \ref{lsp}). Unlike implementing a language extension for IDEs such as IntelliJ which would only benefit IntelliJ users, implementing the LSP allows us to provide unified language support across multiple editors. Following our research, we concluded that the best way to integrate Flint with an IDE would be to implement a subset of the Language Server Protocol (LSP). We believe this is the best approach because LSP provides a standardised, documented format for the language support we aim to provide, in addition to being compatible with a range of different editors.
+
+% TODO: Reference
+\begin{figure}[htbp]
 \centering
 \makebox[\textwidth]{\includegraphics[width=\textwidth]{figures/lsp.png}}
 \caption{Without LSP, providing language support for Flint requires us to implement fully-featured editor support separately for all editors. With LSP, however, we can support many editors with little overhead.}
+\label{lsp}
 \end{figure}
-
-LSP is a protocol which allows a single server implementation for auto-completion, go-to-definition, and diagnostics to be used for multiple editor clients. Unlike implementing a language extension for IDEs such as IntelliJ which would only benefit IntelliJ users, implementing the LSP allows us to provide unified language support across multiple editors. Following our research, we concluded that the best way to integrate Flint with an IDE would be to implement a subset of the Language Server Protocol (LSP). We believe this is the best approach because LSP provides a standardised, documented format for the language support we aim to provide, in addition to being compatible with a range of different editors.
 
 \subsection{Additional Repositories}
 
@@ -31,7 +33,7 @@ We implement a subset of the LSP server capabilities: display of diagnostics and
 
 Given a Flint source file, the compiler returns a list of diagnostics, which can be errors, warnings or notes. Since information about their token positions is collected by the AST passes, the necessary information can be passed to the IDE extension. The IDE then displays all of the messages and highlights the code in question, with a different colour for each diagnostic type. This is illustrated in figure \ref{lsp-use}.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \makebox[\textwidth]{\includegraphics[width=\textwidth]{figures/lsp-use.png}}
 \caption{Flint LSP plug-in in use.}

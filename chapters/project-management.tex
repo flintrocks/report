@@ -16,7 +16,7 @@ Every day we had a virtual standup meetings on our \#standups Slack channel. Gro
 
 Halfway through the project, at the end of the second checkpoint, we met to look at our progress and think about how we can change the process to make a success of the latter two checkpoints of the project. We used a website called `Retrium' which allowed us to anonymously contribute thoughts as a set of virtual notes organised into several columns labelled `start', `stop', and `continue' (see figure \ref{retrium}). It was in this meeting that we identified that we wanted to have multiple standups a day and that we should work harder to not get sidetracked. One issue throughout the project was that implementing some features required the investment of a significant amount of time to build the necessary foundations.
 
-\begin{figure}[H]
+\begin{figure}[htpb]
 \centering
 \makebox[\textwidth]{\includegraphics[width=\textwidth]{figures/Retrospective/r1.png}}
 \caption{Our Retrium board showing all suggestions made by the team.}
@@ -99,18 +99,20 @@ Following our first consultation meeting with Dr Robert Chatley we decided to ma
 %\label{}
 \end{figure}
 
-and inverted the order to emphasise that it is preferable to complete 80\% of tickets 100\% of the way rather than 100\% of the tickets only 80\% of the way. On this board work moved from the right to the left. It was not a lot of work for the group to get used to this new board as most of the tickets would move automatically thanks to GitHub's automation feature. With work moving from the right to the left, whenever the board is first opened the tickets that need to be code-reviewed show up first. We decided that the order of work for everyone should be to 1. review all tickets in the `needs review' column, 2. complete all tickets in the `needs development' column, etc. This way we ensured that all completed tickets were reviewed by at least one person and that the review happened as soon as possible.
+and inverted the order to emphasise that it is preferable to complete 80\% of tickets 100\% of the way rather than 100\% of the tickets only 80\% of the way. On this board work moved from the right to the left. It was not a lot of work for the group to get used to this new board as most of the tickets would move automatically thanks to GitHub's automation feature. 
 
-\begin{figure}[H]
+With work moving from the right to the left, whenever the board is first opened the tickets that need to be code-reviewed show up first. We decided that the order of work for everyone should be to 1. review all tickets in the `needs review' column, 2. complete all tickets in the `needs development' column, etc. This way we ensured that all completed tickets were reviewed by at least one person and that the review happened as soon as possible. Figure \ref{board} shows the reconfigured board.
+
+\begin{figure}[htbp]
 \centering
 \makebox[\textwidth]{\includegraphics[width=\textwidth]{figures/board-cp3.png}}
 \caption{The project board at the start of the third iteration.}
 \label{board}
 \end{figure}
 
-In addition to the board, we used GitHub's milestones feature to track the progress on some of our `sub-projects' such as external calls, unit testing, and asset traits. Milestones provide a handy progression bar that reflects the tickets' current status on the board.
+In addition to the board, we used GitHub's milestones feature to track the progress on some of our `sub-projects' such as external calls, unit testing, and asset traits. Figure \ref{milestones} shows that milestones provide a handy progression bar that reflects the tickets' current status on the board.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \makebox[\textwidth]{\includegraphics[width=\textwidth]{figures/milestones.png}}
 \caption{Milestones on our GitHub repository.}
@@ -121,9 +123,9 @@ In addition to the board, we used GitHub's milestones feature to track the progr
 
 Each ticket corresponded to a `feature' branch on our GitHub repository. We made an effort to enforce a strict review process with a continuous integration pipeline which ensured that every patch worked both before and after merging, as well as to ensure that the code being committed complied with our codebase style rules. To enforce style, we used a tool called swiftlint which would make our build fail if there was an extraneous space or other formatting issue. Once a ticket was nearing completion, a corresponding pull request was created which referenced the issue number of the ticket. This meant that the ticket would automatically be closed when the pull request was closed due to merging or due to being superseded by another ticket or pull request.
 
-Generally our group was very flexible about whose approval was required for any particular feature to be merged. Originally we did not want roles but it very quickly became apparent that some hierarchy was required to make progress. As a result, most code reviews would be reviewed by the `project master' as well as a number of group members before merging. Occasionally when it was necessary, group members also had the freedom to bypass the review process from the project master and approve code changes themselves. This flexibility was a tradeoff between moving fast and ensuring that the code quality remains high.
+Generally our group was very flexible about whose approval was required for any particular feature to be merged. Originally we did not want roles but it very quickly became apparent that some hierarchy was required to make progress. As a result, most code reviews would be reviewed by the `project master' as well as a number of group members before merging (see figure \ref{pr}). Occasionally when it was necessary, group members also had the freedom to bypass the review process from the project master and approve code changes themselves. This flexibility was a tradeoff between moving fast and ensuring that the code quality remains high.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \makebox[\textwidth]{\includegraphics[width=\textwidth]{figures/pr-discussion.png}}
 \caption{Some merged pull requests. Note the number of comments on the right-hand side.}
