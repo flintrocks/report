@@ -13,23 +13,23 @@ We enjoyed the iterations and regularly meeting with our supervisor, which felt 
 There are many parts of the compiler that can be improved and features that are desirable to have. These are just a few:
 
 \begin{itemize}
-	\item Modularisation
+	\item Modularisation\\
 Adding modules allows a contract definition to be split across multiple source files and for the inclusion and distribution of user-made libraries and frameworks.
-	\item Linear types
+	\item Linear types\\
 Linear types are a more integrated version of the Asset traits that we have implemented. These types might be implemented with additional syntax and memory operations, allowing variables that hold quantities of an asset that can be split atomically, never duplicated, and never destroyed. For example, with an asset such as Wei in the context of a @payable contract function, this means we add a semantic check that ensures that the entire value of the incoming asset value is transferred to another instance to prevent its destruction.
-	\item Gas asset
+	\item Gas asset\\
 A built-in Asset type, similar to Wei, that is used for the `gas` hyper-parameter of an external call.
-	\item Generics
+	\item Generics\\
 At some point it may be desirable for the Flint language to feature generics. This feature requires careful design and consideration to stay compatible with Solidity contracts. Options include allowing generics only internally to a Flint contract, developing a Flint ABI that allows generics and is independent of Solidity, or encoding generics into the Solidity ABI itself.
-	\item Flint-contract interop without Solidity ABI
+	\item Flint-contract interop without Solidity ABI\\
 The Solidity ABI severely limits Flint's capabilities to provide safer functionality when interoperating with other contracts. A Flint-specific ABI would allow us to encode additional information about types (such as type states, generics, exceptions) and introduce a trust model for external contracts.
-	\item Targeting eWASM\footnote{\url{https://github.com/ewasm/design}}
+	\item Targeting eWASM\footnote{\url{https://github.com/ewasm/design}}\\
 eWASM is a new Ethereum backend, set to replace EVM in the futuree. By targeting eWASM and potentially replacing the YUL backend keeps Flint up to date with current developments in the Ethereum community and makes it future-proof. With WASM being an industry standard backed by large players in the tech industry, it is poised to become widely implemented, allowing Flint to run on more platforms.
-	\item Flint package manager\footnote{\url{https://github.com/flintlang/flint/pull/151/files}}
+	\item Flint package manager\footnote{\url{https://github.com/flintlang/flint/pull/151/files}}\\
 A package manager has long been a requested feature, but until we implemented external calls there was no reason to have one because there would've been no way to call another contract. Additionally, since the language does not currently support modules, there is no way to import code from another Flint program. Once modules and a Flint ABI are supported, there will be a better case for having a package manager.
-	\item Contract trust model
+	\item Contract trust model\\
 Alongside the package manager, we also wanted to support a trust model between contracts. Under this model, a distinction is made between Flint contracts that have been verified and are guaranteed to work safely and contracts that have issues causing them to misbehave. The compiler might then refuse to compile code that is calling an unsafe contract without taking necessary precautions such as handling an error case.
-	\item LiquidHaskell-style verification support\footnote{\url{https://ucsd-progsys.github.io/liquidhaskell-blog/}}
+	\item LiquidHaskell-style verification support\footnote{\url{https://ucsd-progsys.github.io/liquidhaskell-blog/}}\\
 LiquidHaskell defines logical predicates that allow the programmer to enforce properties at compile-time. In line with the safe programming aspirations of the Flint language, an extension to the compiler is to support predicate annotations that are similar in function and syntax to aid the compiler in verifying correctness and support the issuance of certificates of safeness.
 \end{itemize}
 
@@ -51,6 +51,6 @@ The compiler is run on the user's machine, so once distributed, the user is resp
 
 Other ethical issues that we considered are those that do not directly relate to Flint as a programming language, but the entire Ethereum ecosystem. Important ethical issues concerning the ecosystem more generally include the environmental impact of the blockchain and the anonymity of deployed contracts.
 
-Blockchain networks have a significant environmental impact and with Ethereum\footnote{\url{https://motherboard.vice.com/en_us/article/d3zn9a/ethereum-mining-transaction-electricity-consumption-bitcoin} 2018-12-30} being one of them, it is no exception. Greener alternatives are being developed, although few are as successful as Bitcoin or Ethereum. Unlike Bitcoin, the Ethereum foundation has a plan to reduce the environmental impact of its mining algorithm\footnote{\url{https://www.coindesk.com/ethereums-big-switch-the-new-roadmap-to-proof-of-stake} 2018-12-30}. Importantly, Flint is not necessarily tied to the Ethereum ecosystem and could be retargeted in the future to work on other, greener alternative platforms.
+Blockchain networks have a significant environmental impact and with Ethereum\cite{mb-electricity} being one of them, it is no exception. Greener alternatives are being developed, although few are as successful as Bitcoin or Ethereum. Unlike Bitcoin, the Ethereum foundation has a plan to reduce the environmental impact of its mining algorithm\cite{cd-pos}. Importantly, Flint is not necessarily tied to the Ethereum ecosystem and could be retargeted in the future to work on other, greener alternative platforms.
 
-Anonymity of deployed contracts is also a significant issue, since everything is public on the blockchain. That does not play well with certain domains like the health and financial sectors, which have very high privacy requirements. Solutions\footnote{\url{https://bravenewcoin.com/insights/mobius-to-bring-anonymity-of-monero-to-ethereum} 2019-01-02} to add a layer of privacy to cryptocurrencies currently exist and significant work is being put into this area. One of these solutions was brought in by ZCash, Ethereum bringing support for one of their features with their October 2017 update\footnote{\url{https://bravenewcoin.com/insights/mobius-to-bring-anonymity-of-monero-to-ethereum} 2019-01-02}. ZCash implements something called 'Zero-Knowledge Succinct Non-Interactive Argument of Knowledge', or zk-Snark for short, based on the concept of zero-knowledge cryptography. Zero-knowledge cryptography means that the proof of possession of some information can be verified without any interaction between the prover and the verifier, therefore not revealing anything.\footnote{\url{https://z.cash/technology/zksnarks/} 2019-01-04}
+Anonymity of deployed contracts is also a significant issue, since everything is public on the blockchain. That does not play well with certain domains like the health and financial sectors, which have very high privacy requirements. Solutions\cite{bnc-mobius} to add a layer of privacy to cryptocurrencies currently exist and significant work is being put into this area. One of these solutions was brought in by ZCash, Ethereum bringing support for one of their features with their October 2017 update\cite{bnc-mobius}. ZCash implements something called 'Zero-Knowledge Succinct Non-Interactive Argument of Knowledge', or zk-Snark for short, based on the concept of zero-knowledge cryptography. Zero-knowledge cryptography means that the proof of possession of some information can be verified without any interaction between the prover and the verifier, therefore not revealing anything\cite{zkskarks}.
