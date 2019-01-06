@@ -1,0 +1,61 @@
+enum WeatherReading: Int {
+  case none
+  case sunny
+  case rain
+  case snow
+}
+
+contract WeatherStation {
+  var owner: Address
+  visible var name: String
+  var latestReading: WeatherReading
+}
+
+WeatherStation :: caller <- (any) {
+  public init(newName: String) {
+    self.owner = caller
+    self.name = newName
+    latestReading = WeatherReading.none
+  }
+
+  // Note that this function returns String,
+  // not WeatherReading, because Solidity ABI does not
+  // support custom enumeration types, and there are
+  // currently no functions to convert to and from
+  // raw values of enums in Flint.
+  public func getLatestReading() -> String {
+    var reading: String = "none"
+    if latestReading == WeatherReading.sunny {
+      reading = "sunny"
+    }
+    if latestReading == WeatherReading.rain {
+      reading = "rain"
+    }
+    if latestReading == WeatherReading.snow {
+      reading = "snow"
+    }
+    return reading
+  }
+}
+
+WeatherStation :: (owner) {
+  public mutating func recordSunny() {
+    self.latestReading = WeatherReading.sunny
+  }
+
+  public mutating func recordRain() {
+    self.latestReading = WeatherReading.rain
+  }
+
+  public mutating func recordSnow() {
+    self.latestReading = WeatherReading.snow
+  }
+
+  public mutating func transferOwneship(newOwner: Address) {
+    owner = newOwner
+  }
+
+  public mutating func changeName(newName: String) {
+    name = newName
+  }
+}

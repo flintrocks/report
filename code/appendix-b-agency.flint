@@ -1,0 +1,85 @@
+external trait WeatherStation {
+  func getName() -> string
+  func getLatestReading() -> string
+}
+
+contract TravelAgency {
+  var locations: [Address] = []
+  var locationCount: Int = 0
+  var clients: [Address: Int] = [:]
+  visible var owner: Address
+  event Adding(location: Address)
+}
+
+TravelAgency :: caller <- (any) {
+  public init() {
+    self.owner = caller
+  }
+
+  public func getLocationCount() -> Int {
+    return locations.size
+  }
+
+  func checkLocation(location: Address, recommended: Address) -> Bool {
+    let station: WeatherStation = WeatherStation(address: location)
+    var goodLocation: Bool = false
+    do {
+      let reading: String = (call station.getLatestReading()) as! String
+      if reading == "sunny" {
+        if (recommended == 0x0000000000000000000000000000000000000000)
+            || (clients[location] < clients[recommended]) {
+          goodLocation = true
+        }
+      }
+    } catch is ExternalCallError {}
+    return goodLocation
+  }
+
+  public func getClientsAt(location: Address) -> Int {
+    return clients[location]
+  }
+
+  mutating func addClientAt(location: Address) {
+    clients[location] += 1
+  }
+
+  public mutating func recommendLocation() -> Address {
+    var recommendedName: String = "no good locations today!"
+    var recommendedLocation: Address = 0x0000000000000000000000000000000000000000
+    for let location: Address in locations {
+      do {
+        let station: WeatherStation = WeatherStation(address: location)
+        if checkLocation(location: location, recommended: recommendedLocation) {
+          recommendedName = (call station.getName()) as! String
+          // only set if the call didn't throw
+          recommendedLocation = location
+        }
+      } catch is ExternalCallError {
+        // station not working properly, ignore
+      }
+    }
+    emit Adding(location: recommendedLocation)
+    if recommendedLocation != 0x0000000000000000000000000000000000000000 {
+      addClientAt(location: recommendedLocation)
+    }
+    return recommendedLocation
+  }
+}
+
+TravelAgency :: (owner) {
+  public mutating func addLocation(location: Address) {
+    clients[location] = 0
+    locations[locationCount] = location
+    locationCount += 1
+  }
+
+  public mutating func transferOwneship(newOwner: Address) {
+    owner = newOwner
+  }
+
+  public mutating func startNextDay() {
+    for let location: Address in locations {
+      clients[location] = 0
+    }
+  }
+}

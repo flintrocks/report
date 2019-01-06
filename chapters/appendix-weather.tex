@@ -1,0 +1,17 @@
+In this appendix, we present a somewhat realistic distributed application using the new external calls and error handling features introduced in Flint.
+
+The application consists of two contracts: a travel agency and a number of weather stations.
+
+\section{Weather Station}
+
+Each weather station has a name and its owner can record readings of weather (sunny, rain, snow), which are saved in the station contract state storage. The latest weather reading can be read by users and other contracts by calling the function \mintinline{swift}{getLatestReading}.
+
+\inputminted{swift}{code/appendix-b-station.flint}
+
+\section{Travel Agency}
+
+The weather stations are then used by a `travel agency'. The owner of the agency can add multiple weather stations to the agency's \mintinline{swift}{locations}. Anyone on the network can then call \mintinline{swift}{recommendLocation}, which will cause the agency contract to query each weather station in turn for its weather reading using an external call, then return a location that has sunny weather and fewest clients.
+
+\inputminted{swift}{code/appendix-b-agency.flint}
+
+In this application, external calls are used for passing data from one contract to another. This is meant to resemble a microservice-oriented architecture found in real-world distributed applications.
