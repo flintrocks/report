@@ -4,13 +4,11 @@ At the moment, the vast majority of smart contracts are written in Solidity, a h
 
 \section{Objectives}
 
-Flint, like Solidity, is a programming language for smart contracts in Ethereum. Being type-safe and having a range of built-in security checks and mechanisms, Flint aims to be much safer than Solidity. Flint was developed as part of Franklin Schrans' thesis "Writing Safe Smart Contracts in Flint"
-\cite{flint}
-; however, it lacked important and necessary features, such as external calls that allow a smart contract to interact with other contracts. In particular, without external calls there is no way to process Ether, so Flint would need to create its own coin. In addition, there was no ecosystem for Flint development with the exception of syntax highlighting in Vim and Atom. Our goal was to improve both aspects and in particular we wanted to:
+Flint, like Solidity, is a programming language for smart contracts in Ethereum. Being type-safe and having a range of built-in security checks and mechanisms, Flint aims to be much safer than Solidity. Flint was developed as part of Franklin Schrans' thesis `Writing Safe Smart Contracts in Flint'\cite{flint}; however, it lacked important and necessary features, such as external calls that allow a smart contract to interact with other contracts. In particular, without external calls there is no way to process Ether, so Flint would need to create its own coin. In addition, there was no ecosystem for Flint development with the exception of syntax highlighting in Vim and Atom. Our goal was to improve both aspects and in particular we wanted to:
 
 \begin{itemize}
 	\item Develop an Asset trait that models cryptocurrencies to ensure that the state of currency in the contract is consistent with that on the blockchain
-	\item Generate certifications that highlight compilation warnings and other possible problems in the code to improve the Flint ecosystem
+	\item Provide editor support to highlight compilation warnings and other possible problems in the code to improve the Flint ecosystem
 	\item Design and implement external calls in order to be able to interact with other contracts and process Ether
 \end{itemize}
 
