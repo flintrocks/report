@@ -36,7 +36,7 @@ Improving the language involved implementing new features and fixing problems wi
 	\end{itemize}
 	\item Updating the documentation
 	\begin{itemize}
-		\item \href{https://github.com/flintrocks/flint/pull/139}{\#139} Updated language guide
+		\item \href{https://github.com/flintrocks/flint/pull/139}{\#139} Updated \hyperref[chp:appendix-b]{language guide}
 	\end{itemize}
 \end{itemize}
 
@@ -72,8 +72,7 @@ Of course, this also required many additional checks to be implemented, for exam
 
 Another important feature that we wanted to add to Flint are external calls. This is because Flint is meant to be a programming language for the Ethereum blockchain, so for it to be useful, programs and contracts written in Flint should be able to interact with pre-existing contracts written in Solidity.
 
-We had to introduce a way of declaring these external contracts and design a syntax for calling them that would ensure safety for our programs. This is detailed in our External Calls Proposal. We summarise our conclusions below.
-% TODO: proposal into appendix
+We had to introduce a way of declaring these external contracts and design a syntax for calling them that would ensure safety for our programs. This is detailed in our \hyperref[chp:appendix-a]{External Calls Proposal}. We summarise our conclusions below.
 
 There were a number of problems with calling an external contract:
 
@@ -197,4 +196,4 @@ We discovered that the dot operator was right-associative, a consequence of the 
 
 Apart from fixing the existing compiler, another technical challenge was the fact that we had to work in Swift, with which only two of our group members had previous experience. We tried to overcome this by pairing an experienced member with an inexperienced member to help them get up to speed at the start of the project. Two of our group members worked on Linux causing a bit of a delay at the start of the project because of the work required to get Swift and all of the project's dependencies to run. Our workflow changes at the start of the project, such as the introduction of the linter and reformatting of the codebase, helped the less experienced group members write better code.
 
-Towards the end of our project, we realised the language guide for Flint was incoherently structured and not very well-maintained. The more recent features were not documented and some documented features were no longer working in the language. The latter category went by unnoticed because there were no integration tests for these features, if they even worked before the beginning of our project. The new language guide is available in the appendix.
+Towards the end of our project, we realised the \hyperref[chp:appendix-b]{language guide} for Flint was incoherently structured and not very well-maintained. The more recent features were not documented and some documented features were no longer working in the language. The latter category went by unnoticed because there were no integration tests for these features, if they even worked before the beginning of our project. \hyperref[chp:appendix-b]{The new language guide is available in the appendix}.
