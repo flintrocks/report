@@ -831,7 +831,7 @@ In Flint, functions of a contract are declared within protection blocks, which p
 
 Caller groups consist of a list of caller members enclosed in parentheses. These caller members may be identified using multiple mechanisms, as listed below. Functions inside protection blocks can only be called by an Ethereum address (the `caller' address) that satisfies at least one of the caller members of that protection block.
 
-\begin{tabularx}{\textwidth}{llX}
+\begin{tabularx}{\textwidth}{XlX}
 	Name & Flint type & Callable when\\\hline
 	Predicate function & \texttt{Address -> Bool} & The function is called with the caller as input, must return \texttt{true}.\\
 	0-ary function & \texttt{() -> Address} & The returned address must match the caller address.\\
@@ -998,16 +998,17 @@ Bank :: (accounts, manager) {
 \end{minted}
 
 \begin{minted}{swift}
-// `any` is compatible with any caller protection
+// "any" is compatible with any caller protection
 Bank :: (manager, accounts) {
   func forManagerOrCustomers() {
-    // Valid: "manager" is compatible with "manager" (and "any", too), and "accounts"
-    // is compatible with "any"
+    // Valid: "manager" is compatible with "manager"
+    // (and "any", too), and "accounts" is compatible with "any"
     forManagerOrCustomers2()
   }
 }
 
-// The caller protection "manager" has no effect: "any" is compatible with any caller protection
+// The caller protection "manager" has no effect:
+// "any" is compatible with any caller protection
 Bank :: (manager, any) {
   func forManagerOrCustomers2() {}
 }
@@ -1297,21 +1298,18 @@ Expressions are at the core of any computation done in Flint code. Evaluating an
 
 The expressions available in Flint are:
 
-\begin{center}
-\begin{tabularx}{\textwidth}{llX}
-	Name & Syntax & Description\\\hline
-	Literal & \texttt{1}, \texttt{"hello"}, \texttt{false}, etc. & Constant value; see \hyperref[sec:appendix-b-literals]{literals}.\\
-	Range & \texttt{<expr-1>..<<expr-2>}, \texttt{<expr-1>...<expr-2>} & See \hyperref[sec:appendix-b-range-types]{ranges}.\\
-	Binary expression & \texttt{<expr-1> <op> <expr-2>} & A binary operation \texttt{<op>} applied to the expressions \texttt{<expr-1>} and \texttt{<expr-2>}; see \hyperref[sec:appendix-b-operators]{operators}.\\
-	Struct reference & \texttt{\&<expr>} & See \hyperref[sec:appendix-b-structs-as-function-arguments]{structs as function arguments}.\\
-	Function call & \texttt{<function-name>(<param-1>: <expr-1>, <param-2>: <expr-2>, ...)} & Call to the function \texttt{<function-name>} with the results of the given expressions \texttt{<expr-1,2,...>} as parameters. See \hyperref[sec:appendix-b-function-calls]{function calls}.\\
-	Dot access & \texttt{<expr-1>.<field>} & Access to the \texttt{<field>} field (variable, constant, function) or the result of \texttt{<expr-1>}.\\
-	Index / key access & \texttt{<expr-1>[<expr-2>]} & Access to the given key of a list or dictionary.\\
-	External call & \texttt{call <external-contract>.<function-name>(<param-1>: <expr-1>, <param-2>: <expr-2>, ...)} & Call to the function of an external contract; see \hyperref[sec:appendix-b-external-calls]{external calls}.\\
-	Type cast & \texttt{<expr> as! <type>} & Forced cast of the result of \texttt{<expr>} to \texttt{<type>}; see \hyperref[sec:appendix-b-casting-to-and-from-solidity-types]{casting to and from Solidity types}.\\
-	Attempt & \texttt{try? <call>}, \texttt{try! <call>} & Attempt to call a function in a different protection block, see \hyperref[sec:appendix-b-dynamic-checking]{dynamic checking}.
-\end{tabularx}
-\end{center}
+\begin{itemize}
+	\item Literal (e.g. \mintinline{swift}{1}, \mintinline{swift}{"hello"}, \mintinline{swift}{false}, etc.) – constant value; see \hyperref[sec:appendix-b-literals]{literals}.\\
+	\item Range (e.g. \mintinline{swift}{<expr-1>..<<expr-2>}, \mintinline{swift}{<expr-1>...<expr-2>}) – see \hyperref[sec:appendix-b-range-types]{ranges}.\\
+	\item Binary expression (e.g. \mintinline{swift}{<expr-1> <op> <expr-2>}) – a binary operation \mintinline{swift}{<op>} applied to the expressions \mintinline{swift}{<expr-1>} and \mintinline{swift}{<expr-2>}; see \hyperref[sec:appendix-b-operators]{operators}.\\
+	\item Struct reference (e.g. \mintinline{swift}{&<expr>}) – see \hyperref[sec:appendix-b-structs-as-function-arguments]{structs as function arguments}.\\
+	\item Function call (e.g.\\\mintinline{swift}{<function-name>(<param-1>: <expr-1>, <param-2>: <expr-2>, ...)})\\– call to the function \mintinline{swift}{<function-name>} with the results of the given expressions \mintinline{swift}{<expr-1,2,...>} as parameters. See \hyperref[sec:appendix-b-function-calls]{function calls}.\\
+	\item Dot access (e.g. \mintinline{swift}{<expr-1>.<field>}) - access to the \mintinline{swift}{<field>} field (variable, constant, function) or the result of \mintinline{swift}{<expr-1>}.\\
+	\item Index / key access (e.g. \mintinline{swift}{<expr-1>[<expr-2>]}) – access to the given key of a list or dictionary.\\
+	\item External call (e.g.\\\mintinline{swift}{call <external-contract>.<function-name>(<param-1>: <expr-1>, ...)})\\– call to the function of an external contract; see \hyperref[sec:appendix-b-external-calls]{external calls}.\\
+	\item Type cast (e.g. \mintinline{swift}{<expr> as! <type>}) – forced cast of the result of \mintinline{swift}{<expr>} to \mintinline{swift}{<type>}; see \hyperref[sec:appendix-b-casting-to-and-from-solidity-types]{casting to and from Solidity types}.\\
+	\item Attempt (e.g. \mintinline{swift}{try? <call>}, \mintinline{swift}{try! <call>}) – attempt to call a function in a different protection block, see \hyperref[sec:appendix-b-dynamic-checking]{dynamic checking}.
+\end{itemize}
 
 \subsubsection{Function calls}
 \label{sec:appendix-b-function-calls}
@@ -1769,7 +1767,9 @@ X :: (any) {
     let extInstance = Ext(address: externalAddress)
     call(gas: 10000)! extInstance.someLongFunction()
     call(value: Wei(unsafeRawValue: 100))! extInstance.someExpensiveFunction()
-    call(gas: 10000, value: Wei(unsafeRawValue: 100))! extInstance.someLongExpensiveFunction()
+    call(
+        gas: 10000, value: Wei(unsafeRawValue: 100)
+      )! extInstance.someLongExpensiveFunction()
   }
 }
 \end{minted}
