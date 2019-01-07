@@ -59,25 +59,21 @@
 % make links blue
 \hypersetup{colorlinks,urlcolor=blue,pdfborderstyle={/S/U/W 1}}
 
-\setcounter{chapter}{7}
-\setcounter{section}{0}
-\chapter*{Appendix A: External Calls Proposal}
+\begin{appendices}
+\renewcommand\appendixname{Annex}
+\renewcommand{\chaptername}{Annex}
+
+\chapter{External Calls Proposal}
 \label{chp:appendix-a}
-\addcontentsline{toc}{chapter}{\nameref{chp:appendix-a}}
 \input{chapters/appendix-proposal}
 
-\setcounter{chapter}{8}
-\setcounter{section}{0}
-\chapter*{Appendix B: Language Guide}
+\chapter{Language Guide}
 \label{chp:appendix-b}
-\addcontentsline{toc}{chapter}{\nameref{chp:appendix-b}}
 \input{chapters/appendix-guide}
 
-\setcounter{chapter}{9}
-\setcounter{section}{0}
-\chapter*{Appendix C: Example Real-World Contract}
+\chapter{Example Real-World Contract}
 \label{chp:appendix-c}
-\addcontentsline{toc}{chapter}{\nameref{chp:appendix-c}}
 \input{chapters/appendix-weather}
+\end{appendices}
 
 \end{document}
