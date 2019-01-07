@@ -9,3 +9,6 @@
 *.toc
 *.pdf
 _minted-cw
+
+/cw-blx.bib
+/cw.run.xml
